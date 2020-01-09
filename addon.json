@@ -1,0 +1,25 @@
+{
+    "type": "addon",
+    "key": "rj-notification-consolidation",
+    "name": "Notification Consolidation",
+    "description": "Consolidates all notifaction mails and sends them out once a day",
+    "license": "MIT",
+    "version": "0.0.1",
+    "settingsUrl": "/settings/notificationconsolidation",
+    "pluginUrl": "https://github.com/r-j/rj-notification-consolidation",
+    "authors": [
+        {
+            "name": "Robin Jurinka",
+            "homepage": "https://open.vanillaforums.com/profile/r_j"
+        }
+    ],
+    "priority": 10,
+    "className": "NotificationConsolidationPlugin",
+    "hasLocale": true,
+    "mobileFriendly": true,
+    "usePopupSettings": true,
+    "requiredTheme": false,
+    "requiredPlugin": false,
+    "allowDisable": true,
+    "hidden": false
+}
