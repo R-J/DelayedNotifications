@@ -58,7 +58,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         // Save period if the form has been posted.
         if ($sender->Form->authenticatedPostBack()) {
             $period = $sender->Form->getFormValue('Period');
-            if ($period < 0 or $period > 7*24) {
+            if ($period < 0 || $period > 7*24) {
                 $sender->Form->adderror(Gdn::translate('must be numeric between 0 and 168 (one week)'),'Period');
             } else {
                 Gdn::set('Plugin.NotificationConsolidation.Period', $period);
@@ -66,7 +66,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             $extract = $sender->Form->getFormValue('Extract');
             if (!is_numeric($extract)) {
                 $sender->Form->adderror(Gdn::translate('must be numeric between 30 and 300'),'Extract');
-            } elseif ($extract > 300 or $extract < 30) {
+            } elseif ($extract > 300 || $extract < 30) {
                 $sender->Form->adderror(Gdn::translate('enter number between 30 and 300'),'Extract');
             } else {
                 Gdn::set('Plugin.NotificationConsolidation.Extract', $extract);
