@@ -103,8 +103,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             'Description' => Gdn::translate('This plugin stops the immidate sending of notification emails. Instead, you specify a period after which notifications are sent in a single consolidated email.'),
             'SecretUrl' => $url,
             'UrlDescription' => Gdn::translate('You have to create a cron job that periodically polls this url:<br /><code>%s</code>'),
-            'PeriodDescription' => Gdn::translate('Numberof hours to accummulate notification before emailing them as a bundle-Specify a number between 1 and 168 (a week).'),
-            'ExtractDescription' => Gdn::translate('Request that a short content extract be included with the notification-Specify 0 for no extract or an integer between 30 and 300 for extract length.'),
+            'PeriodDescription' => Gdn::translate('Number of hours to accummulate notification before emailing them as a bundle. Specify a number between 1 and 168 (a week).'),
+            'ExtractDescription' => Gdn::translate('Request that a short content extract be included with the notification. Specify 0 for no extract or an integer between 30 and 300 for extract length.'),
             'Period' => $period,
             'Extract' => $extract
         ]);
