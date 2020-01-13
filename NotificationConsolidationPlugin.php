@@ -6,6 +6,8 @@ use Gdn;
 use Gdn_Plugin;
 use Gdn_Format;
 use ActivityModel;
+use DiscussionModel;
+use CommentModel;
 use Gdn_Email;
 
 class NotificationConsolidationPlugin extends Gdn_Plugin {
@@ -56,22 +58,37 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         // Save period if the form has been posted.
         if ($sender->Form->authenticatedPostBack()) {
             $period = $sender->Form->getFormValue('Period');
-            if ($period) {
+            if ($period < 0 or $period > 7*24) {
+                $sender->Form->adderror(Gdn::translate('must be numeric between 0 and 168 (one week)'),'Period');
+            } else {
                 Gdn::set('Plugin.NotificationConsolidation.Period', $period);
+            }
+            $extract = $sender->Form->getFormValue('Extract');
+            if (!is_numeric($extract)) {
+                $sender->Form->adderror(Gdn::translate('must be numeric between 30 and 300'),'Extract');
+            } elseif ($extract > 300 or $extract < 30) {
+                $sender->Form->adderror(Gdn::translate('enter number between 30 and 300'),'Extract');
+            } else {
+                Gdn::set('Plugin.NotificationConsolidation.Extract', $extract);
+            }
+            if ($sender->Form->errorCount() == 0) {
                 $sender->informMessage(Gdn::translate('Saved'));
             }
         } else {
             $period = Gdn::get('Plugin.NotificationConsolidation.Period');
+            $extract = Gdn::get('Plugin.NotificationConsolidation.Extract');
         }
 
         // Prepare content for the view.
         $sender->setData([
             'Title' => Gdn::translate('Notification Consolidation Settings'),
-            'Description' => Gdn::translate('This plugin stops the immidate send out of notification mails. You have to define a period instead after which notifications are sent out in one consolidated mail.'),
+            'Description' => Gdn::translate('This plugin stops the immidate sending of notification emails. Instead, you specify a period after which notifications are sent in a single consolidated email.'),
             'SecretUrl' => $url,
             'UrlDescription' => Gdn::translate('You have to create a cron job that periodically polls this url:<br /><code>%s</code>'),
-            'PeriodDescription' => Gdn::translate('Period (in hours) in which notification mails should be gathered before they are sent in one package'),
-            'Period' => $period
+            'PeriodDescription' => Gdn::translate('Numberof hours to accummulate notification before emailing them as a bundle-Specify a number between 1 and 168 (a week).'),
+            'ExtractDescription' => Gdn::translate('Request that a short content extract be included with the notification-Specify 0 for no extract or an integer between 30 and 300 for extract length.'),
+            'Period' => $period,
+            'Extract' => $extract
         ]);
 
         $sender->render('settings', '', 'plugins/rj-notification-consolidation');
@@ -111,8 +128,13 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      * @return void.
      */
     public function activityModel_beforeSendNotification_handler($sender, $args) {
+        $period = Gdn::get('Plugin.NotificationConsolidation.Period', 24);
+        if ($period == 0) {                 //Don't delay if consolidation is disabled (period=0)
+            return;
+        }
         // This will cause an ActivityModel::SENT_SKIPPED status in Activity table.
         if ($args['User']['Attributes']['NotificationConsolidation'] ?? false == true) {
+//decho('delaying');
             Gdn::config()->saveToConfig('Garden.Email.Disabled', true, false);
         }
     }
@@ -122,19 +144,25 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         $secret = Gdn::get('Plugin.NotificationConsolidation.Secret');
         // Check if url has been called with the correct key.
         if ($request != $secret) {
-            // throw permissionException();
-decho('secret mismatch');
-//            return;
+            throw permissionException(__CLASS__." Invalid Parameters");
+            return;
         }
 
         // Check if enough time has passed since last run date.
         $period = Gdn::get('Plugin.NotificationConsolidation.Period', 24);
-        $lastRunDate = Gdn::get('Plugin.NotificationConsolidation.LastRunDate', 0);
-        if ($lastRunDate > Gdn_Format::toDateTime(time() - 3600 * $period)) {
-decho('last run date too high');
+        if ($period == 0) {
             return;
         }
-
+        $lastRunDate = Gdn::get('Plugin.NotificationConsolidation.LastRunDate', 0);
+        if ($lastRunDate == 0) {            //If this was never set NOW is as good as any time...
+            $lastRunDate = Gdn_Format::toDateTime(time() - 3600 * $period);
+            Gdn::set('Plugin.NotificationConsolidation.LastRunDate', $lastRunDate);
+        }
+        if ($lastRunDate > Gdn_Format::toDateTime(time() - 3600 * $period)) {   //RB: ?Why, What scenario?
+decho('last run date too high. Period:'.$period);
+            return;
+        }
+//decho('last run date:'.Gdn_Format::toDateTime($lastRunDate));
         // Get _all_ open activities.
         $model = new ActivityModel();
         $unsentActivities = $model->getWhere(
@@ -147,46 +175,139 @@ decho('last run date too high');
         // Group them by user.
         $notifications = [];
         $userModel = Gdn::userModel();
+        $extract = Gdn::get('Plugin.NotificationConsolidation.Extract', false);
+//decho('checking unsents');
         foreach ($unsentActivities as $activity) {
-            $user = $userModel->getID($activity['NotifyUserID']);
+            $user = $userModel->getID($activity['NotifyUserID']);;
             // Do not proceed if the user has not opted in for a consolidation,
-            // is banned or deleted.
+            // is banned or deleted or hasn't logged on for two years.
             if (
                     $user->Banned == true ||
                     $user->Deleted == true ||
-                    $user->Attributes['NotificationConsolidation'] ?? false == false
+                    $user->DateLastActive < Gdn_Format::toDateTime(strtotime("-2 years")) ||
+                    $user->Attributes['NotificationConsolidation'] == false
             ) {
+decho('skipping user '.$user->UserID . ' attributes:'.$user->Attributes['NotificationConsolidation']);
                 continue;
             }
             $notifications[$user->UserID][] = $activity;
+//decho(' ');
         }
-decho(dbdecode(dbencode($notifications)));
-        // Concat activities to one message
+//decho(dbdecode(dbencode($notifications)));
+        // Foreach user concatename activities notifications to one message
+        $mstream = '';                  //Combined message stream
         foreach ($notifications as $userID => $activities) {
-decho(dbdecode(dbencode($activities)));
-            $messages = [];
+//decho(dbdecode(dbencode($activities)));
             foreach($activities as $activity) {
                 $story = false;
-                if ($activity['Story'] && $activity['Format']) {
-                    $story = Gdn_Format::to(
-                        $activity['Story'],
-                        $activity['Format']
-                    );
+                $skip = false;  //Few reasons to skip: discussion/comment deleted, originator is the one to be notified...
+                if ($activity["ActivityUserID"] == $activity["NotifyUserID"]) {
+                    $message .= "DEBUG:ActivityUserID = NotifyUserID";
                 }
-decho(__LINE__);
-                $messages[$activity['ActivityID']] = [
-                    'DateInserted' => $activity['DateInserted'],
-                    'Headline' => $this->getHeadline($activity),
-                    'Story' => $story
-                ];
-decho($messages);
-                $emailed = $this->sendMessage($userID, $messages);
-                // delete if sent ok
-                // update sent status?
+                if ($activity["NotifyUserID"] == $activity["InsertUserID"]) {
+                    $message .= "DEBUG:NotifyUserID = InsertUserID";
+                }
+                $object = $this->getobject($activity);
+                if ($object == false) {
+                    $skip = true;                           //Presume object is deleted
+                } elseif ($object == -1) {                  //Special handling for other notifications
+                } else {                                    //Handling of discussion/comment notifications
+                    if ($extract) {
+                        $story .= sliceString(strip_tags($object->Body), $extract);
+                    }
+                }
+                if (!$skip) {
+                    $message .= $this->formatmessage(
+                                                    $activity['DateInserted'],
+                                                    $activity['Photo'],
+                                                    val("Prefix", $object, ''),
+                                                    $this->getHeadline($activity),
+                                                    $story
+                                                    );
+                    $mstream .= wrap($message,'p');   //accummulate message stream that goes in one email 
+                }                
+            }
+            //  Send the accummulated messages
+            if ($this->sendMessage($userID, $mstream) == ActivityModel::SENT_OK) {  //successful send?
+                $mstream = '';
+                foreach($activities as $activity) {                                 //Mark all related activities as emailed
+//decho (__LINE__." for testing pretend clearing acivity as sent && updting lastrundte");
+                    $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);
+                }
+                Gdn::set('Plugin.NotificationConsolidation.LastRunDate', time());   //Update last run date
             }
         }
     }
-
+    /**
+     * Format individual message.
+     *
+     * @param string $date       notification related date.
+     * @param int    $photo      originator photo.
+     * @param int    $prefix     Discussion Prefix (if set).
+     * @param string $headline   notification headline.
+     * @param string $story      additional optional text
+     * @param string $format     story format
+     *
+     * @return string formatted notification.
+     */
+    private function formatmessage($date, $photo, $prefix, $headline, $story, $format = "HTML") {
+        // Not counting on css for the resulting email system
+        if ($photo) {
+            $message = wrap(
+                            '<img src="' . $photo . '" style="width:22px;height:22px;" </img>',
+                            'span',
+                            ['style' => 'display:inline-block;margin:4px;vertical-align: middle;']
+                            );
+        }
+        $message .= wrap(
+                         $headline . " " . $date . ' ',
+                         'span',
+                         ['style'=> 'vertical-align: middle;']
+                         );
+        if ($prefix) {
+            $message .= wrap(
+                            $prefix,
+                            'span',
+                            ['style' => "background:darkcyan;color:white;"]
+                            );
+        }
+        if ($story) {
+            $story = "<br>" . wrap(
+                                    Gdn_Format::to(
+                                                    $story,
+                                                    $format),
+                                    'span',
+                                    ['style' => 'padding-left:10%;display:block;white-space:break-spaces;']
+                                );
+            $message .= wrap($story,'span', ["style" => "font-style: italic;color:#0074d9;"]);
+        }
+        return wrap(
+                    $message,
+                    'span',
+                    ["style" => "border:1px solid #0074d9;display:block;width:90%;white-space: break-spaces;"]
+                    );
+    }
+    /**
+     * Get content object (Discussion or Comment).
+     *
+     * @param array $activity An activity data record.
+     *
+     * @return object (or -1 if not discussion/comment, false if not found)
+     */
+    private function getobject($activity) {
+        if ($activity["RecordType"] == "Discussion") {
+            $recordmodel = new DiscussionModel();
+        } elseif ($activity["RecordType"] == "Comment") {
+            $recordmodel = new CommentModel();
+        } else {
+            return -1;
+        }
+        $object = $recordmodel->GetID($activity["RecordID"]);
+        if ($object) {
+            return $object;
+        }
+        return false;
+    }
     /**
      * Format the headline of an activity.
      *
@@ -242,7 +363,7 @@ decho($messages);
         // Prepare mail
         $actionUrl = Gdn::request()->url('/profile/notifications', true);
         $user = Gdn::userModel()->getID($recipientUserID);
-        $lastRunDate = Gdn::get('Plugin.NotificationConsolidation.LastRunDate', 0);
+        $lastRunDate = Gdn_Format::toDateTime(Gdn::get('Plugin.NotificationConsolidation.LastRunDate', 0));
         $email = new Gdn_Email();
         $email->subject(
             sprintf(
@@ -255,20 +376,20 @@ decho($messages);
             )
         );
         $email->to($user);
-        $message = '';
-        foreach ($messages as $message) {
-            $message .= '<p>'.$message['DateInserted'].'</p>';
+//decho($messages);
+        /*foreach ($messages as $message) {
+var_dump($message);
+            $message  = '<p>'.$message['DateInserted'].'</p>';
             $message .= '<p>'.$message['Headline'].'</p>';
             if ($message['Story']) {
                 $message .= '<p>'.$message['Story'].'</p>';
             }
-            $message .= '<hr />';
-        }
-decho($message);
+            $message .= '<br />';
+        }*/
         $emailTemplate = $email->getEmailTemplate()
             ->setButton($actionUrl, Gdn::translate('Check it out'))
             ->setTitle(Gdn::translate('New Notifications'))
-            ->setMessage($message, true);
+            ->setMessage($messages, true);
 
 
         $this->EventArguments['Messages'] = $email;

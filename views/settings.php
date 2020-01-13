@@ -1,6 +1,4 @@
 <?php defined('APPLICATION') or die;
-
-decho($this->data('Period'));
  ?>
 <h1><?= $this->data('Title') ?></h1>
 <div class="padded">
@@ -15,11 +13,22 @@ decho($this->data('Period'));
         <div class="label-wrap">
             <?= $this->Form->label('Consolidation Period', 'Period') ?>
             <div class="info">
-                <?= $this->data('Description') ?>
+                <?= $this->data('PeriodDescription') ?>
             </div>
         </div>
         <div class="input-wrap">
-            <?= $this->Form->textBox('Period', ['type' => 'number', 'value' => $this->data('Period')]) ?>
+            <?= $this->Form->textbox('Period', ['type' => 'number', 'value' => $this->data('Period')]) ?>
+            <?= $this->Form->inlineError('Period')?>
+        </div>
+        <div class="label-wrap">
+            <?= $this->Form->label('Extract snippet', 'Extract') ?>
+            <div class="info">
+                <?= $this->data('ExtractDescription') ?>
+            </div>
+        </div>
+        <div class="input-wrap">
+            <?= $this->Form->textbox('Extract', ['type' => 'number', 'value' => $this->data('Extract')]) ?>
+            <?= $this->Form->inlineError('Extract')?>
         </div>
     </li>
 </ul>
