@@ -326,6 +326,22 @@ decho('skipping user '.$user->UserID . ' attributes:'.$user->Attributes['Notific
         }
         return false;
     }
+
+    private function getRecordType($activity) {
+        // Only handle Discussions and Comments.
+        if (!in_array($activity['RecordType'], ['Discussion', 'Comment'])) {
+            return null;
+        }
+        // Create model dynamically.
+        $modelName = $activity['RecordType'].'Model';
+        $record = (new $modelName())->getID($activity['RecordID']);
+        if ($record) {
+            return $record;
+        }
+
+        return false;
+    }
+
     /**
      * Format the headline of an activity.
      *
