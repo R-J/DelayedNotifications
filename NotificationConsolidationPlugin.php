@@ -9,6 +9,7 @@ use ActivityModel;
 use DiscussionModel;
 use CommentModel;
 use Gdn_Email;
+use Vanilla\Invalid;
 
 class NotificationConsolidationPlugin extends Gdn_Plugin {
     /**
@@ -57,21 +58,38 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
 
         // Save period if the form has been posted.
         if ($sender->Form->authenticatedPostBack()) {
+            // Validate Period.
             $period = $sender->Form->getFormValue('Period');
-            if ($period < 0 || $period > 7*24) {
-                $sender->Form->adderror(Gdn::translate('must be numeric between 0 and 168 (one week)'),'Period');
-            } else {
-                Gdn::set('Plugin.NotificationConsolidation.Period', $period);
-            }
+            $sender->Form->validateRule('Period', 'ValidateRequired');
+            $sender->Form->validateRule('Period', 'ValidateInteger');
+            $sender->Form->validateRule(
+                'Period',
+                function ($period) {
+                    if ($period >= 0 && $period <= 7*24) {
+                        return true;
+                    }
+                    return new Invalid('');
+                },
+                Gdn::translate('Period must be numeric between 0 and 168 (one week)')
+            );
+            // Validate Extract.
             $extract = $sender->Form->getFormValue('Extract');
-            if (!is_numeric($extract)) {
-                $sender->Form->adderror(Gdn::translate('must be numeric between 30 and 300'),'Extract');
-            } elseif ($extract > 300 || $extract < 30) {
-                $sender->Form->adderror(Gdn::translate('enter number between 30 and 300'),'Extract');
-            } else {
-                Gdn::set('Plugin.NotificationConsolidation.Extract', $extract);
-            }
+            $sender->Form->validateRule('Extract', 'ValidateRequired');
+            $sender->Form->validateRule('Extract', 'ValidateInteger');
+            $sender->Form->validateRule(
+                'Extract',
+                function ($extract) {
+                    if ($extract == 0 || ($extract >= 30 && $extract <= 30)) {
+                        return true;
+                    }
+                    return new Invalid('');
+                },
+                Gdn::translate('Extract must be 0 or an integer between 30 and 300')
+            );
+            // Save settings and give feedback.
             if ($sender->Form->errorCount() == 0) {
+                Gdn::set('Plugin.NotificationConsolidation.Period', $period);
+                Gdn::set('Plugin.NotificationConsolidation.Extract', $extract);
                 $sender->informMessage(Gdn::translate('Saved'));
             }
         } else {
