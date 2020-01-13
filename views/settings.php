@@ -1,4 +1,5 @@
 <?php defined('APPLICATION') or die;
+$this->Form->showErrors();
  ?>
 <h1><?= $this->data('Title') ?></h1>
 <div class="padded">
@@ -18,7 +19,6 @@
         </div>
         <div class="input-wrap">
             <?= $this->Form->textbox('Period', ['type' => 'number', 'value' => $this->data('Period')]) ?>
-            <?= $this->Form->inlineError('Period')?>
         </div>
         <div class="label-wrap">
             <?= $this->Form->label('Extract snippet', 'Extract') ?>
@@ -28,7 +28,6 @@
         </div>
         <div class="input-wrap">
             <?= $this->Form->textbox('Extract', ['type' => 'number', 'value' => $this->data('Extract')]) ?>
-            <?= $this->Form->inlineError('Extract')?>
         </div>
     </li>
 </ul>
