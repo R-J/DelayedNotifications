@@ -546,18 +546,18 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             return '';          //Can't trust local references in remote email system
         }
 //decho ($imageurl);
-        $size=getimagesize($imageurl);
+        $size = getimagesize($imageurl);
         //echo "<br>".__LINE__." size:".var_dump($size);
         //decho ($size);            //Ignoresmallimages (oftentimes "like"-like buttons)
-        $Minimagesize = c('Plugin.NotificationConsolidation.Minimagesize', "20");
-        if ($size[0]< $Minimagesize || $size[1]< $Minimagesize) {
+        $minImageSize = Gdn::config('Plugin.NotificationConsolidation.MinImageSize', 20);
+        if ($size[0] < $minImageSize || $size[1] < $minImageSize) {
             //decho ($size);
             return '';
         }
-        
+
         $image = '<div style="border:2px solid blue;border-radius:4px;margin:4px;">'.
-                    '<img width="100px"  ' . 
-                    'style="border-radius:4px;margin:4px;" src="' . 
+                    '<img width="100px"  ' .
+                    'style="border-radius:4px;margin:4px;" src="' .
                     $imageurl . '" >'.
                   '</div>';
 //decho(htmlentities($image));
