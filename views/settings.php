@@ -5,29 +5,35 @@ $this->Form->showErrors();
 <div class="padded">
     <?= $this->data('Description') ?>
 </div>
-<div class="padded alert alert-info">
+<div class="padded alert  ">
     <?= sprintf($this->data('UrlDescription'), $this->data('SecretUrl')) ?>
 </div>
 <?= $this->Form->open(), $this->Form->errors() ?>
 <ul>
     <li class="form-group">
         <div class="label-wrap">
-            <?= $this->Form->label('Consolidation Period', 'Period') ?>
-            <div class="info">
-                <?= $this->data('PeriodDescription') ?>
-            </div>
+            <?= $this->Form->label($this->data('PeriodLabel'), 'Period') ?>
         </div>
         <div class="input-wrap">
-            <?= $this->Form->textbox('Period', ['type' => 'number', 'value' => $this->data('Period')]) ?>
+            <?= $this->Form->dropDown('Period', $this->data('Periodsarray'), ['value' => $this->data('Period')]) ?>
         </div>
         <div class="label-wrap">
-            <?= $this->Form->label('Extract snippet', 'Extract') ?>
+            <?= $this->Form->label($this->data('ExtractLabel'), 'Extract') ?>
             <div class="info">
                 <?= $this->data('ExtractDescription') ?>
             </div>
         </div>
         <div class="input-wrap">
-            <?= $this->Form->textbox('Extract', ['type' => 'number', 'value' => $this->data('Extract')]) ?>
+            <?= $this->Form->textbox('Extract', ['type' => 'number', 'min' => '0', 'max' => '300', 'step' => '30','value' => $this->data('Extract')]) ?>
+        </div>
+        <div class="label-wrap">
+            <?= $this->Form->label($this->data('GetimageLabel'), 'Getimage') ?>
+            <div class="info">
+                <?= $this->data('GetimageDescription') ?>
+            </div>
+        </div>
+        <div class="input-wrap">
+            <?= $this->Form->checkbox('Getimage', ['value' => $this->data('Getimage')]) ?>
         </div>
     </li>
 </ul>
