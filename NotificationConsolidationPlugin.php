@@ -124,9 +124,9 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         $periodsarray = explode(',', Gdn::translate(Gdn::config('Plugin.NotificationConsolidation.Periods')));
         $periodtext = Gdn::translate($periodsarray[$period]);
         $periodmessage = sprintf(
-                    'Check this box to receive all notification emails consolidated over %s ',
-                    $periodtext
-                );
+            'Check this box to receive all notification emails consolidated over %s ',
+            $periodtext
+        );
         if ($sender->Form->authenticatedPostBack()) {
             $sender->UserModel->saveAttribute(
                 $sender->User->UserID,
@@ -180,9 +180,9 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
 
         // Check if enough time has passed since last run date.
         $period = Gdn::get('Plugin.NotificationConsolidation.Period', '12 hours');
-        if ($period == 0) {                 //Disabled 
+        if ($period == 0) {                 //Disabled
             echo Gdn::translate('Plugin is disabled when period is set to zero');
-            return;      
+            return;
         }
         $lastRunDate = Gdn::get('Plugin.NotificationConsolidation.LastRunDate', 0);
         $nexttime = $this->nexttime($period, $lastRunDate);       //Next eligible email consolidation time
@@ -235,10 +235,10 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             // Do not proceed if the user has not opted in for a consolidation,
             // is banned or deleted or hasn't logged on for two years.
             if (
-                    $user->Banned == true ||
-                    $user->Deleted == true ||
-                    $user->DateLastActive < Gdn_Format::toDateTime(strtotime('-2 years')) ||
-                    $user->Attributes['NotificationConsolidation'] == false
+                $user->Banned == true ||
+                $user->Deleted == true ||
+                $user->DateLastActive < Gdn_Format::toDateTime(strtotime('-2 years')) ||
+                $user->Attributes['NotificationConsolidation'] == false
             ) {
 /*decho('skipping. user='.$user->UserID . ' name='.$user->Name  . ' DateLastActive='.$user->DateLastActive . 
        ' -2years='.Gdn_Format::toDateTime(strtotime('-2 years')) . 
@@ -254,10 +254,10 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
 //decho(dbdecode(dbencode($notifications)));
         // Foreach user concatenate activities notifications to one message
         $messageStream = '';                  //Combined message stream
-        echo '<br>' . sprintf(
-                              Gdn::translate('Processing %1$s users'),
-                              count($notifications)
-                              );
+        echo '<br>'.sprintf(
+            Gdn::translate('Processing %1$s users'),
+            count($notifications)
+        );
         foreach ($notifications as $userID => $activities) {
 //decho("Processing userid".$userID );
 //decho(dbdecode(dbencode($activities)));
@@ -286,14 +286,14 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
                 }
                 if (!$skip) {
                     $message .= $this->formatmessage(
-                                                    $activity['DateInserted'],
-                                                    $activity['Photo'],
-                                                    val('Prefix', $object, ''),
-                                                    $this->getHeadline($activity),
-                                                    $story
-                                                    );
-                    $messageStream .= wrap($message,'div'); //accummulate message stream that goes in one email 
-                }                
+                        $activity['DateInserted'],
+                        $activity['Photo'],
+                        val('Prefix', $object, ''),
+                        $this->getHeadline($activity),
+                        $story
+                    );
+                    $messageStream .= wrap($message,'div'); //accummulate message stream that goes in one email
+                }
             }
             //  Send the accummulated messages
             if ($this->sendMessage($userID, $messageStream, $buttoanchor[$userID]) == ActivityModel::SENT_OK) {  //successful send?
@@ -322,38 +322,36 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         // Not counting on css for the resulting email system
         if ($photo) {
             $message = wrap(
-                            '<img src="' . $photo . '" style="width:22px;height:22px;" </img>',
-                            'span',
-                            ['style' => 'display:inline-block;margin:4px;vertical-align: middle;']
-                            );
+                '<img src="' . $photo . '" style="width:22px;height:22px;" </img>',
+                'span',
+                ['style' => 'display:inline-block;margin:4px;vertical-align: middle;']
+            );
         }
         $message .= wrap(
-                         $headline . ' ' . $date . ' ',
-                         'span',
-                         ['style'=> 'vertical-align: middle;']
-                         );
+            $headline . ' ' . $date . ' ',
+            'span',
+            ['style'=> 'vertical-align: middle;']
+        );
         if ($prefix) {
             $message .= wrap(
-                            $prefix,
-                            'span',
-                            ['style' => 'background:darkcyan;color:white;']
-                            );
+                $prefix,
+                'span',
+                ['style' => 'background:darkcyan;color:white;']
+            );
         }
         if ($story) {
-            $story = '<br>' . wrap(
-                                    Gdn_Format::to(
-                                                    $story,
-                                                    $format),
-                                    'span',
-                                    ['style' => 'padding-left:10%;display:block;white-space:break-spaces;']
-                                );
-            $message .= wrap($story,'span', ['style' => 'font-style: italic;color:#0074d9;']);
+            $story = '<br>'.wrap(
+                Gdn_Format::to($story, $format),
+                'span',
+                ['style' => 'padding-left:10%;display:block;white-space:break-spaces;']
+            );
+            $message .= wrap($story, 'span', ['style' => 'font-style: italic;color:#0074d9;']);
         }
         return wrap(
-                    $message,
-                    'div',
-                    ['style' => 'border:1px solid #0074d9;display:block;width:90%;white-space: break-spaces;']
-                    );
+            $message,
+            'div',
+            ['style' => 'border:1px solid #0074d9;display:block;width:90%;white-space: break-spaces;']
+        );
     }
     /**
      * Get content object (Discussion or Comment).
@@ -376,6 +374,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         }
         return false;
     }
+
     /**
      * Calclulate next eligible email notification time based on passed period index nd last run.
      *
@@ -511,12 +510,12 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         return $emailed;
     }
     /**
-* Return first embedded image in dicussion/comment body.
-*
-* @param object $body standard
-*
-* @return string html to include image in notification (or empty string)
-*/
+     * Return first embedded image in dicussion/comment body.
+     *
+     * @param object $body standard
+     *
+     * @return string html to include image in notification (or empty string)
+     */
     public function getimage($body) {
         $i = stripos($body, "<img");
         if ($i === false) {
@@ -556,10 +555,10 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         }
 
         $image = '<div style="border:2px solid blue;border-radius:4px;margin:4px;">'.
-                    '<img width="100px"  ' .
-                    'style="border-radius:4px;margin:4px;" src="' .
-                    $imageurl . '" >'.
-                  '</div>';
+            '<img width="100px"  ' .
+            'style="border-radius:4px;margin:4px;" src="' .
+            $imageurl . '" >'.
+            '</div>';
 //decho(htmlentities($image));
         return $image;
     }
