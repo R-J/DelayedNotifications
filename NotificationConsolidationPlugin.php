@@ -23,22 +23,6 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             'Plugin.NotificationConsolidation.Periods',
             '2 hours,6 hours,12 hours,24 hours,2 days,3 days,4 days,5 days,6 days,1 week'
         );
-        //The following is the embedded heading within each email
-        Gdn::config()->touch(
-            'Plugin.NotificationConsolidation.EmbeddedTitle',
-            'Consolidated Notifications since %1$s'
-        );
-        // The following is the email subject.  If set to a fixed text email
-        // systems can stack such emails together. If set to change each time,
-        // these systems will keep the emails separated.
-        // Example of dynamically changes subject: '2 hours consolidated
-        // Notifications since %1$s'
-        // The %n$s available variables:  %1$s - time since last consolidation
-        //                                %2$s - the consolidation period (e.g. 12 hours)
-        Gdn::config()->touch(
-            'Plugin.NotificationConsolidation.EmailSubject',
-            '%2$s Consolidated Notifications'
-        );
         Gdn::config()->touch(
             'Plugin.NotificationConsolidation.MinImageSize',
             '20'
@@ -478,18 +462,16 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         $periodsarray = explode(',', Gdn::translate(Gdn::config('Plugin.NotificationConsolidation.Periods')));
         $periodtext = Gdn::translate($periodsarray[$period]);
         $email->subject(
-                        sprintf(
-                                Gdn::translate('[%1$s] %2$s'),
-                                Gdn::config('Garden.Title'),
-                                sprintf(
-                                        Gdn::translate(
-                                                       Gdn::config('Plugin.NotificationConsolidation.EmailSubject'),
-                                                       ),
-                                        $lastRunDate, 
-                                        $periodtext
-                                        )
-                                )
-                        );
+            sprintf(
+                Gdn::translate('[%1$s] %2$s'),
+                Gdn::config('Garden.Title'),
+                sprintf(
+                    Gdn::translate('NotificationConsolidation.EmailSubject'),
+                    $lastRunDate,
+                    $periodtext
+                )
+            )
+        );
         $email->to($user);
 //decho($messages);
         if ($buttoanchor) {
@@ -497,13 +479,12 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         }
         $emailTemplate = $email->getEmailTemplate()
             ->setButton($actionUrl, Gdn::translate('Check out your notifications'))
-            ->setTitle(sprintf(
-                                Gdn::translate(
-                                               Gdn::config('Plugin.NotificationConsolidation.EmbeddedTitle'
-                                               ),
-                                ),
-                                $lastRunDate
-                            ))
+            ->setTitle(
+                sprintf(
+                    Gdn::translate('NotificationConsolidation.EmbeddedTitle'),
+                    $lastRunDate
+                )
+            )
             ->setMessage($messages, true);
         $this->EventArguments['Messages'] = $email;
         $this->EventArguments['Email'] = $email;
