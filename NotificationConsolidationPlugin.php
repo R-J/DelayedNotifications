@@ -19,28 +19,30 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *  @return void.
      */
     public function setup() {
-        touchconfig(
-                    'Plugin.NotificationConsolidation.Periods',
-                    '2 hours,6 hours,12 hours,24 hours,2 days,3 days,4 days,5 days,6 days,1 week'
-                    );
+        Gdn::config()->touch(
+            'Plugin.NotificationConsolidation.Periods',
+            '2 hours,6 hours,12 hours,24 hours,2 days,3 days,4 days,5 days,6 days,1 week'
+        );
         //The following is the embedded heading within each email
-        touchconfig(
-                    'Plugin.NotificationConsolidation.EmbeddedTitle',
-                    'Consolidated Notifications since %1$s'
-                    );
-        //The following is the email subject.  If set to a fixed text email systems can stack such emails
-        //together.  If set to change each time, these systems will keep the emails separated.
-        //Example of dynamically changes subject: '2 hours consolidated Notifications since %1$s'
-        //The %n$s available variables:  %1$s - time since last consolidation
-        //                               %2$s - the consolidation period (e.g. 12 hours)
-        touchconfig(
-                    'Plugin.NotificationConsolidation.EmailSubject',
-                    '%2$s Consolidated Notifications'
-                    );
-        touchconfig(
-                    'Plugin.NotificationConsolidation.Minimagesize',
-                    '20'
-                    );
+        Gdn::config()->touch(
+            'Plugin.NotificationConsolidation.EmbeddedTitle',
+            'Consolidated Notifications since %1$s'
+        );
+        // The following is the email subject.  If set to a fixed text email
+        // systems can stack such emails together. If set to change each time,
+        // these systems will keep the emails separated.
+        // Example of dynamically changes subject: '2 hours consolidated
+        // Notifications since %1$s'
+        // The %n$s available variables:  %1$s - time since last consolidation
+        //                                %2$s - the consolidation period (e.g. 12 hours)
+        Gdn::config()->touch(
+            'Plugin.NotificationConsolidation.EmailSubject',
+            '%2$s Consolidated Notifications'
+        );
+        Gdn::config()->touch(
+            'Plugin.NotificationConsolidation.MinImageSize',
+            '20'
+        );
         $this->structure();
     }
 
