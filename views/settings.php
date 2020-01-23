@@ -1,6 +1,6 @@
 <?php defined('APPLICATION') or die;
 $this->Form->showErrors();
- ?>
+?>
 <h1><?= $this->data('Title') ?></h1>
 <div class="padded">
     <?= $this->data('Description') ?>
