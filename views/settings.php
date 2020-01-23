@@ -10,7 +10,7 @@ $this->Form->showErrors();
         <?= sprintf($this->data('UrlDescription'), $this->data('SecretUrl')) ?>
     </div>
     <div  style="margin-left:10px;">
-        <?= $this->data('ParameterlDescription') ?>
+        <?= $this->data('ParameterDescription') ?>
     </div>
 </div>
 <?= $this->Form->open(), $this->Form->errors() ?>
