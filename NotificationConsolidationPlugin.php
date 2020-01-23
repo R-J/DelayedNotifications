@@ -1,7 +1,6 @@
 <?php
 
-class NotificationConsolidationPlugin extends Gdn_Plugin
-{
+class NotificationConsolidationPlugin extends Gdn_Plugin {
     /**
      *  Run on startup to init sane config settings and db changes.
      *
@@ -79,14 +78,14 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             $sender->Form->validateRule('MaxEmail', 'ValidateInteger');
             // Validate the range below
             if ($maxEmail < 1 || $maxEmail > 300) {
-                $sender->Form->adderror(Gdn::translate('enter number between 1 and 300'), 'MaxEmail');
+                $sender->Form->addError(Gdn::translate('enter number between 1 and 300'), 'MaxEmail');
             }
             // Validate Extract.
             $sender->Form->validateRule('Extract', 'ValidateRequired');
             $sender->Form->validateRule('Extract', 'ValidateInteger');
             // In case the browser doesn't support min/mx/step attributes we validate the range below
             if ($extract != 0 && ($extract < 30 || $extract > 300)) {
-                $sender->Form->adderror(Gdn::translate('enter number between 30 and 300'), 'Extract');
+                $sender->Form->addError(Gdn::translate('enter number between 30 and 300'), 'Extract');
             }
             // Save settings and give feedback.
             if ($sender->Form->errorCount() == 0) {
@@ -216,21 +215,21 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             return;
         }
         $lastRunDate = Gdn::get('Plugin.NotificationConsolidation.LastRunDate', 0);
-        $nexttime = $this->nexttime($period, $lastRunDate);       //Next eligible email consolidation time
+        $nextTime = $this->nextTime($period, $lastRunDate);       //Next eligible email consolidation time
         if ($lastRunDate == 0) {            //If this was never set NOW is as good as any time...
-            $nexttime = time();
+            $nextTime = time();
             Gdn::set('Plugin.NotificationConsolidation.LastRunDate', time());
-        } elseif ($nexttime >  time()) {                        //Still have more time based on current period
+        } elseif ($nextTime >  time()) {                        //Still have more time based on current period
             if ($force) {                                       //However proceed if "force" specified (good for testing)
                 $periodsArray = explode(',', Gdn::config('Plugin.NotificationConsolidation.Periods'));
                 $goback = end($periodsArray);
                 $lastRunDate = strtotime('- '. $goback);        //Simulate "it's time to run"
             } else {
-                $this->msg('Still accummulating notices until:'.Gdn_Format::toDateTime($nexttime), $silence);
+                $this->msg('Still accummulating notices until:'.Gdn_Format::toDateTime($nextTime), $silence);
                 return;
             }
         }
-        if ($lastRunDate > $nexttime) {                                         //Should never happen
+        if ($lastRunDate > $nextTime) {                                         //Should never happen
             $this->msg('last run date too high:'.Gdn_Format::toDateTime($lastRunDate));
             Gdn::set('Plugin.NotificationConsolidation.LastRunDate', time());   //Fix by resetting last time
             return;                                                             //but wait for next scheduled run
@@ -264,8 +263,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         $maxEmail = Gdn::get('Plugin.NotificationConsolidation.MaxEmail', 5);
         $sentCount = 0;                                                     //Count sent emails
         foreach ($unsentActivities as $activity) {
-            if (!isset($buttoanchor[$activity['NotifyUserID']])) {
-                $buttoanchor[$activity['NotifyUserID']] = $activity['ActivityID'];
+            if (!isset($buttonAnchor[$activity['NotifyUserID']])) {
+                $buttonAnchor[$activity['NotifyUserID']] = $activity['ActivityID'];
             }
             $user = $userModel->getID($activity['NotifyUserID']);
             // Do not proceed if the user has not opted in for a consolidation,
@@ -313,7 +312,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
                 }
                 $image = '';
                 $extractText = '';
-                $object = $this->getobject($activity);
+                $object = $this->getObject($activity);
                 if ($object == false) {
                     $skip = true;                               //Presume object was deleted since notification was queued
                 } elseif ($object == -1) {                      //Special handling for other notifications
@@ -337,7 +336,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             //  Send the accummulated messages
             if ($streamCount && $sentCount <= $maxEmail) {
 //decho (' force:'.$force.' sentcount:'.$sentCount.' inqueue:'.$inQueue.' maxemail:'.$maxEmail.' userID:'.$userID);
-                if ($this->sendMessage($userID, $messageStream, $buttoanchor[$userID]) == ActivityModel::SENT_OK) {  //successful send?
+                if ($this->sendMessage($userID, $messageStream, $buttonAnchor[$userID]) == ActivityModel::SENT_OK) {  //successful send?
                     if (!$force) {
                         foreach ($activities as $activity) {                                 //Mark all related activities as emailed
                             $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);
@@ -443,12 +442,12 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         }
         if ($extractText) {
             if (isset($object->CommentID)) {
-                $commenttext = wrap(
+                $commentText = wrap(
                     Gdn::translate('Comment').':',
                     'span',
                     ['style' => 'background:white;color:#306fa6;padding:0px 4px;text-shadow:1px 0px 0px#0561a6;']
                 );
-                $message .= '<td style="line-height:1.2;">' . $prefix . ' ' . $commenttext . '<br>' . $extractText . '</td>';
+                $message .= '<td style="line-height:1.2;">' . $prefix . ' ' . $commentText . '<br>' . $extractText . '</td>';
             } else {
                 $message .= '<td style="line-height:1.2;">' . $prefix . '<br>' . $extractText . '</td>';
             }
@@ -491,7 +490,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return object (or -1 if not discussion/comment, false if not found)
      */
-    private function getobject($activity) {
+    private function getObject($activity) {
         if ($activity['RecordType'] == 'Discussion') {
             $recordModel = new DiscussionModel();
         } elseif ($activity['RecordType'] == 'Comment') {
@@ -499,7 +498,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         } else {
             return -1;
         }
-        $object = $recordModel->GetID($activity['RecordID']);
+        $object = $recordModel->getID($activity['RecordID']);
         if ($object) {
             return $object;
         }
@@ -525,7 +524,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return int time of next eligible run time
      */
-    private function nexttime($period, $lastRun) {
+    private function nextTime($period, $lastRun) {
         if (!$period) {
             return false;             //zero means disabled
         }
@@ -535,8 +534,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         $datetime = new DateTime();
         $datetime->setTimestamp($lastRun);
         $datetime->modify('+' . $periodsArray[$period]);     //Next eligible time
-        $nexttime = strtotime($datetime->format('Y-m-d H:i:s'));
-        return ($nexttime);
+        $nextTime = strtotime($datetime->format('Y-m-d H:i:s'));
+        return ($nextTime);
     }
 
     /**
@@ -587,11 +586,11 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @param int $recipient UserID ID of the user.
      * @param array $messages The messages to be sent.
-     * @param string $buttoanchor optional activityID for anchoring template button.
+     * @param string $buttonAnchor optional activityID for anchoring template button.
      *
      * @return int One of ActivityModel SENT status.
      */
-    private function sendMessage($recipientUserID, $messages, $buttoanchor = '') {
+    private function sendMessage($recipientUserID, $messages, $buttonAnchor = '') {
         // Prepare mail
         $actionUrl = Gdn::request()->url('/profile/notifications', true);
         $user = Gdn::userModel()->getID($recipientUserID);
@@ -612,8 +611,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             )
         );
         $email->to($user);
-        if ($buttoanchor) {
-            $actionUrl .= "#Activity_" . $buttoanchor;
+        if ($buttonAnchor) {
+            $actionUrl .= "#Activity_" . $buttonAnchor;
         }
         $emailTemplate = $email->getEmailTemplate()
             ->setButton($actionUrl, Gdn::translate('Check out your notifications'))
@@ -688,7 +687,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         } else {
             return '';          //Can't trust local references in remote email system
         }
-        $size=getimagesize($imageUrl);
+        $size = getimagesize($imageUrl);
         //Ignore smallimages (oftentimes "like"-like buttons)
         $minImageSize = Gdn::config('Plugin.NotificationConsolidation.MinImageSize', "20");
         if ($size[0] < $minImageSize || $size[1] < $minImageSize) {
