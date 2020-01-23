@@ -7,7 +7,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *  @return void.
      */
     public function setup() {
-        if (function_exists('Gdn::config()->touch')) {
+        if (!function_exists('touchConfig')) {
             Gdn::config()->touch(
                 'Plugin.NotificationConsolidation.Periods',
                 '12 hours,1 day,2 days,3 days,4 days,5 days,6 days,1 week'
