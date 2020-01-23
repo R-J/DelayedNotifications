@@ -1,6 +1,6 @@
 {
     "type": "addon",
-    "key": "rj-notification-consolidation",
+    "key": "notification-consolidation",
     "name": "Notification Consolidation",
     "description": "Consolidates all notifaction mails and sends them out once a day",
     "license": "MIT",
