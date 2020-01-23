@@ -1,18 +1,5 @@
 <?php
 
-namespace RJPlugins;
-
-use Gdn;
-use Gdn_Plugin;
-use Gdn_Format;
-use ActivityModel;
-use DiscussionModel;
-use CommentModel;
-use Gdn_Email;
-use Vanilla\Invalid;
-use \Datetime;
-use Garden\Web\Exception\NotFoundException;
-
 class NotificationConsolidationPlugin extends Gdn_Plugin {
     /**
      *  Run on startup to init sane config settings and db changes.
@@ -20,13 +7,13 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *  @return void.
      */
     public function setup() {
-        if (function_exists('\Gdn::config()->touch')) {
-            \Gdn::config()->touch(
+        if (function_exists('Gdn::config()->touch')) {
+            Gdn::config()->touch(
                         'Plugin.NotificationConsolidation.Periods',
                         '12 hours,1 day,2 days,3 days,4 days,5 days,6 days,1 week'
                         );
 
-            \Gdn::config()->touch(
+            Gdn::config()->touch(
                         'Plugin.NotificationConsolidation.MinImageSize',
                         '20'
                         );
