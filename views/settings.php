@@ -23,16 +23,16 @@ $this->Form->showErrors();
             </div>
         </div>
         <div class="input-wrap">
-            <?= $this->Form->dropDown('Period', $this->data('Periodsarray'), ['value' => $this->data('Period')]) ?>
+            <?= $this->Form->dropDown('Period', $this->data('PeriodsArray'), ['value' => $this->data('Period')]) ?>
         </div>
         <div class="label-wrap">
-            <?= $this->Form->label($this->data('MaxemailLabel'), 'Maxemail') ?>
+            <?= $this->Form->label($this->data('MaxEmailLabel'), 'MaxEmail') ?>
             <div class="info" style="margin-left:10px;">
-                <?= $this->data('MaxemailDescription').'<br>' ?>
+                <?= $this->data('MaxEmailDescription').'<br>' ?>
             </div>
         </div>
         <div class="input-wrap">
-            <?= $this->Form->textbox('Maxemail', [ 'min' => '1', 'max' => '300', 'step' => '1','value' => $this->data('Maxemail')]) ?>
+            <?= $this->Form->textbox('MaxEmail', [ 'min' => '1', 'max' => '300', 'step' => '1','value' => $this->data('MaxEmail')]) ?>
         </div>
         <div class="label-wrap">
             <?= $this->Form->label($this->data('ExtractLabel'), 'Extract') ?>
@@ -44,13 +44,13 @@ $this->Form->showErrors();
             <?= $this->Form->textbox('Extract', ['type' => 'number', 'min' => '0', 'max' => '300', 'step' => '30','value' => $this->data('Extract')]) ?>
         </div>
         <div class="label-wrap">
-            <?= $this->Form->label($this->data('GetimageLabel'), 'Getimage') ?>
+            <?= $this->Form->label($this->data('GetImageLabel'), 'GetImage') ?>
             <div class="info" style="margin-left:10px;">
-                <?= $this->data('GetimageDescription') ?>
+                <?= $this->data('GetImageDescription') ?>
             </div>
         </div>
         <div class="input-wrap">
-            <?= $this->Form->CheckBox('Getimage', '') ?>
+            <?= $this->Form->CheckBox('GetImage', '') ?>
         </div>
     </li>
 </ul>
