@@ -9,22 +9,22 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
     public function setup() {
         if (!function_exists('touchConfig')) {
             Gdn::config()->touch(
-                'Plugin.NotificationConsolidation.Periods',
+                'Plugins.NotificationConsolidation.Periods',
                 '12 hours,1 day,2 days,3 days,4 days,5 days,6 days,1 week'
             );
 
             Gdn::config()->touch(
-                'Plugin.NotificationConsolidation.MinImageSize',
+                'Plugins.NotificationConsolidation.MinImageSize',
                 '20'
             );
         } else {            //try to support Vanilla 2.6...
             touchConfig(
-                'Plugin.NotificationConsolidation.Periods',
+                'Plugins.NotificationConsolidation.Periods',
                 '12 hours,1 day,2 days,3 days,4 days,5 days,6 days,1 week'
             );
 
             touchConfig(
-                'Plugin.NotificationConsolidation.MinImageSize',
+                'Plugins.NotificationConsolidation.MinImageSize',
                 '20'
             );
         }
@@ -65,7 +65,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             '/plugin/notificationconsolidation?cron=n&quiet=n&secret='.$secret,
             true
         );
-        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugin.NotificationConsolidation.Periods')));
+        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.NotificationConsolidation.Periods')));
         // Save period if the form has been posted.
         if ($sender->Form->authenticatedPostBack()) {
             // No need to validate Period as it is a dropdown.
@@ -137,7 +137,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         if ($period == 0) {                     //ignore if disabled
             return;
         }
-        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugin.NotificationConsolidation.Periods')));
+        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.NotificationConsolidation.Periods')));
         $periodText = Gdn::translate($periodsArray[$period]);
         $periodmessage = sprintf(
             'Check this box to receive all notification emails consolidated over %s ',
@@ -205,8 +205,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             return;
         }
         if ($force) {
-            $this->msg('Forced mode. Last run: '.c('Plugin.NotificationConsolidation.LastforcedRun', '?'), $silence);
-            saveToConfig('Plugin.NotificationConsolidation.LastforcedRun', Gdn_Format::toDateTime(Time()));
+            $this->msg('Forced mode. Last run: '.c('Plugins.NotificationConsolidation.LastforcedRun', '?'), $silence);
+            saveToConfig('Plugins.NotificationConsolidation.LastforcedRun', Gdn_Format::toDateTime(Time()));
         }
         // Check if enough time has passed since last run date.
         $period = Gdn::get('Plugin.NotificationConsolidation.Period', '12 hours');
@@ -221,7 +221,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             Gdn::set('Plugin.NotificationConsolidation.LastRunDate', time());
         } elseif ($nextTime >  time()) {                        //Still have more time based on current period
             if ($force) {                                       //However proceed if "force" specified (good for testing)
-                $periodsArray = explode(',', Gdn::config('Plugin.NotificationConsolidation.Periods'));
+                $periodsArray = explode(',', Gdn::config('Plugins.NotificationConsolidation.Periods'));
                 $goback = end($periodsArray);
                 $lastRunDate = strtotime('- '. $goback);        //Simulate "it's time to run"
             } else {
@@ -528,7 +528,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         if (!$period) {
             return false;             //zero means disabled
         }
-        $periodsArray = explode(',', Gdn::config('Plugin.NotificationConsolidation.Periods'));
+        $periodsArray = explode(',', Gdn::config('Plugins.NotificationConsolidation.Periods'));
         // array must be strtotime eligible...
         //  e.g. 2 hours,6 hours,12 hours,24 hours,2 days,3 days,4 days,5 days,6 days,1 week
         $datetime = new DateTime();
@@ -597,7 +597,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         $lastRunDate = Gdn_Format::toDateTime(Gdn::get('Plugin.NotificationConsolidation.LastRunDate', 0));
         $email = new Gdn_Email();
         $period = Gdn::get('Plugin.NotificationConsolidation.Period');
-        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugin.NotificationConsolidation.Periods')));
+        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.NotificationConsolidation.Periods')));
         $periodText = Gdn::translate($periodsArray[$period]);
         $email->subject(
             sprintf(
@@ -689,7 +689,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         }
         $size = getimagesize($imageUrl);
         //Ignore smallimages (oftentimes "like"-like buttons)
-        $minImageSize = Gdn::config('Plugin.NotificationConsolidation.MinImageSize', "20");
+        $minImageSize = Gdn::config('Plugins.NotificationConsolidation.MinImageSize', "20");
         if ($size[0] < $minImageSize || $size[1] < $minImageSize) {
             return '';
         }
