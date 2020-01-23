@@ -7,27 +7,6 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *  @return void.
      */
     public function setup() {
-        if (!function_exists('touchConfig')) {
-            Gdn::config()->touch(
-                'Plugins.NotificationConsolidation.Periods',
-                '12 hours,1 day,2 days,3 days,4 days,5 days,6 days,1 week'
-            );
-
-            Gdn::config()->touch(
-                'Plugins.NotificationConsolidation.MinImageSize',
-                '20'
-            );
-        } else {            //try to support Vanilla 2.6...
-            touchConfig(
-                'Plugins.NotificationConsolidation.Periods',
-                '12 hours,1 day,2 days,3 days,4 days,5 days,6 days,1 week'
-            );
-
-            touchConfig(
-                'Plugins.NotificationConsolidation.MinImageSize',
-                '20'
-            );
-        }
         $this->structure();
     }
 
@@ -37,6 +16,16 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *  @return void.
      */
     public function structure() {
+        touchConfig(
+            'Plugins.NotificationConsolidation.Periods',
+            '12 hours,1 day,2 days,3 days,4 days,5 days,6 days,1 week'
+        );
+
+        touchConfig(
+            'Plugins.NotificationConsolidation.MinImageSize',
+            '20'
+        );
+
         $secret = Gdn::get('Plugin.NotificationConsolidation.Secret');
         if ($secret) {
             return;
@@ -694,5 +683,23 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             return '';
         }
         return $imageUrl;
+    }
+}
+
+if (!function_exists('touchConfig')) {
+    /**
+     * Make sure the config has a setting.
+     *
+     * This function is useful to call in the setup/structure of plugins to
+     * make sure they have some default config set.
+     *
+     * @param string|array $name The name of the config key or an array of config key value pairs.
+     * @param mixed $default The default value to set in the config.
+     *
+     * @deprecated 2.8 Use Gdn_Configuration::touch()
+     */
+    function touchConfig($name, $default = null) {
+        deprecated(__FUNCTION__, 'Gdn_Configuration::touch()');
+        Gdn::config()->touch($name, $default);
     }
 }
