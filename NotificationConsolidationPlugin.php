@@ -280,7 +280,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
         $this->msg(
             sprintf(
                 Gdn::translate('Processing %1$s users'),
-                count($notifications)
+                $inQueue
             ),
             $silence
         );
@@ -304,6 +304,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
                 $object = $this->getObject($activity);
                 if ($object == false) {
                     $skip = true;                               //Presume object was deleted since notification was queued
+                    $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);    //This shouldn't be processed again
                 } elseif ($object == -1) {                      //Special handling for other notifications
                 } else {                                        //Handling of discussion/comment notifications
                 }
@@ -381,7 +382,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
     private function formatMessage($date, $photo, $object, $getImage, $extract, $headline, $story) {
         // Not counting on css for the resulting email system
         $message = '<table width="98%" cellspacing="0" cellpadding="0" border="0" margin-bottom: 10px;><colgroup><col style="vertical-align: top;"><col></colgroup><tr>';
-        if (trim($photo)) {
+        if (trim($photo) && substr($photo,0,4) == 'http') {
             $message .= '<td width="26px" valign="top" align="right">' .
                         '<span style="border-radius: 4px;padding: 0px 5px;vertical-align: top;display: table-cell;">'.
                         wrap(
