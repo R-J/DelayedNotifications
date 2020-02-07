@@ -1,12 +1,13 @@
 <?php
-
-class NotificationConsolidationPlugin extends Gdn_Plugin {
+class NotificationConsolidationPlugin extends Gdn_Plugin
+{
     /**
      *  Run on startup to init sane config settings and db changes.
      *
      *  @return void.
      */
-    public function setup() {
+    public function setup()
+    {
         $this->structure();
     }
 
@@ -15,7 +16,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *
      *  @return void.
      */
-    public function structure() {
+    public function structure()
+    {
         touchConfig(
             'Plugins.NotificationConsolidation.Periods',
             '12 hours,1 day,2 days,3 days,4 days,5 days,6 days,1 week'
@@ -43,7 +45,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *
      * @return void.
      */
-    public function settingsController_notificationConsolidation_create($sender) {
+    public function settingsController_notificationConsolidation_create($sender)
+    {
         $sender->permission('Garden.Settings.Manage');
         $sender->setHighlightRoute('settings/plugins');
 
@@ -116,10 +119,17 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
             'GetImageLabel' => Gdn::translate('Include image')
         ]);
 
-        $sender->render('settings', '', 'plugins/rj-notification-consolidation');
+        $sender->render('settings', '', 'plugins/notification-consolidation');
     }
-
-    public function profileController_customNotificationPreferences_handler($sender) {
+    /**
+     * Profile notification setting for combined notifications.
+     *
+     * @param PorfileController $sender instance of the calling class.
+     *
+     * @return void.
+     */
+    public function profileController_customNotificationPreferences_handler($sender)
+    {
         // ugly: mixing view and model!
         $attributes = [];
         $period = Gdn::get('Plugin.NotificationConsolidation.Period');
@@ -162,7 +172,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *
      * @return void.
      */
-    public function activityModel_beforeSendNotification_handler($sender, $args) {
+    public function activityModel_beforeSendNotification_handler($sender, $args)
+    {
         $period = Gdn::get('Plugin.NotificationConsolidation.Period', 24);
         if ($period == 0) {                 //Don't delay if consolidation is disabled (period=0)
             return;
@@ -175,14 +186,15 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
     /**
      * Process accummulated notifications.
      *
-     * @param $sender instance of the calling class.
+     * @param object $sender instance of the calling class.
      * @param Array $args Event arguments.
      *
      * @return void.
      */
-    public function pluginController_notificationConsolidation_create($sender, $args) {
+    public function pluginController_notificationConsolidation_create($sender, $args)
+    {
         $request = $sender->Request->get('secret');
-        $force   = ($sender->Request->get('force') == "y");     //force sending consolidated emails (ignoring the period & previous emails. Good for testing)
+        $force   = ($sender->Request->get('force') == "y");     //force sending emails (ignoring the period & previous emails.For testing)
         $quiet   = ($sender->Request->get('quiet') == "y");     //quiet mode - supress most messages (e.g. for plugin intiated runs)
         $cron    = ($sender->Request->get('cron') == "y");      //cron type runs (some messages are supressed)
         $silence = ($cron || $quiet);                           //Silence MOST messages
@@ -306,13 +318,22 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
                     $skip = true;                               //Presume object was deleted since notification was queued
                     $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);    //This shouldn't be processed again
                 } elseif ($object == -1) {                      //Special handling for other notifications
+                    $photo = $activity['Photo'];
                 } else {                                        //Handling of discussion/comment notifications
+                    $photo = Gdn::userModel()->getID($activity['InsertUserID'])->Photo;
+                    if ($photo && !isUrl($photo)) {
+                        $photo = Gdn_Upload::url(changeBasename($photo, 'n%s'));
+                    }
+                                                                                                                           
+                    if ($photo && isUrl($photo)) {
+                    } else {
+                        $photo = userPhotoDefaultUrl(Gdn::userModel()->getID($activity['InsertUserID']));  //Suppport avatars;
+                    }
                 }
-
                 if (!$skip) {
                     $message .= $this->formatMessage(
                         $activity['DateInserted'],
-                        $activity['Photo'],
+                        $photo,
                         $object,
                         $getImage,
                         $extract,
@@ -379,10 +400,11 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *
      * @return string formatted notification.
      */
-    private function formatMessage($date, $photo, $object, $getImage, $extract, $headline, $story) {
+    private function formatMessage($date, $photo, $object, $getImage, $extract, $headline, $story)
+    {
         // Not counting on css for the resulting email system
         $message = '<table width="98%" cellspacing="0" cellpadding="0" border="0" margin-bottom: 10px;><colgroup><col style="vertical-align: top;"><col></colgroup><tr>';
-        if (trim($photo) && substr($photo,0,4) == 'http') {
+        if (trim($photo) && substr($photo, 0, 4) == 'http') {
             $message .= '<td width="26px" valign="top" align="right">' .
                         '<span style="border-radius: 4px;padding: 0px 5px;vertical-align: top;display: table-cell;">'.
                         wrap(
@@ -428,7 +450,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
                         ' </td>';
         }
         if ($extract) {                                     //Get content extract
-            $extractText = $this->getExtract($object, $extract);
+            $extractText = $this->getExtract($object->Body, $extract);
         }
         if ($extractText) {
             if (isset($object->CommentID)) {
@@ -456,13 +478,14 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
     /**
      * Conditionally issue translated feedback message based on the running environment.
      *
-     * @param text $message feedback message.
+     * @param text $text feedback message.
      * @param flag $quiet quiet mode - no message is displayed if flag is set
      * @param flag $die indicating exception after message is emitted.
      *
      * @return void
      */
-    private function msg($text, $quiet = false, $die = false) {
+    private function msg($text, $quiet = false, $die = false)
+    {
         if ($die) {
             echo '<br>' . "\r\n" . Gdn::translate($text);           //just in case it's a cron job
             throw new NotFoundException('<h4>--- ' . __CLASS__ . '</h4><h3>' . Gdn::translate($text) . ' ---</h3>');
@@ -480,7 +503,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *
      * @return object (or -1 if not discussion/comment, false if not found)
      */
-    private function getObject($activity) {
+    private function getObject($activity)
+    {
         if ($activity['RecordType'] == 'Discussion') {
             $recordModel = new DiscussionModel();
         } elseif ($activity['RecordType'] == 'Comment') {
@@ -497,14 +521,50 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
    /**
      * Get text extract from Discussion or Comment.
      *
-     * @param object $record discussion or comment record.
+     * @param string $string discussion or comment body text.
      * @param int $length extract length
      *
      * @return string
      */
-    private function getExtract($record, $length) {
-        $extractText = sliceString(preg_replace('/\s+/', ' ', strip_tags($record->Body, '<i><b><br>')), $length);
+    private function getExtract($string, $length)
+    {
+        $string = $this->deleteBetweenTags('<div class="Spoiler">', '</div>', $string, ' ... ', true); //Replace text within spoiler tags with " ... "
+        $extractText = sliceString(preg_replace('/\s+/', ' ', strip_tags($string, '<i><b><br>')), $length);
+        $virtualEnd = c('Plugins.Extract.virtualEnd', '');
+        if ($virtualEnd) {                                              //Extract plugin set content virtual end (tag to stop extract?)?
+            $extractText = explode($virtualEnd, $extractText)[0];       //So truncate to that point
+        }
         return $extractText;
+    }
+   /**
+     * Remove all text between specified tags.
+     *
+     * @param string $starttag Starting tag.
+     * @param string $endtag end tag.
+     * @param string $string string from which to extract text between tags
+     * @param string $replace optional string to replace extracted text between tags
+     * @param flag $all optional indicator whether to remove all occurences or just the first one
+     *
+     * @return string
+     */
+    private function deleteBetweenTags($starttag, $endtag, $string, $replace = '', $all = false)
+    {
+        $startPos = strpos($string, $starttag);
+        if ($startPos === false) {
+            return $string;
+        }
+        $endPos   = strpos($string, $endtag);
+        if ($endPos === false) {
+            $endPos = strlen($string);
+        } else {
+            $endPos = $endPos + strlen($endtag);
+        }
+        $result = substr($string, 0, $startPos) . $replace . substr($string, ($endPos));         //Mark removed content with replacement
+        if ($all) {
+            return $this->deleteBetweenTags($starttag, $endtag, $result, $replace, $all);       // recursion to replace all occurences
+        } else {
+            return $result;
+        }
     }
     /**
      * Calclulate next eligible email notification time based on passed period index nd last run.
@@ -514,7 +574,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *
      * @return int time of next eligible run time
      */
-    private function nextTime($period, $lastRun) {
+    private function nextTime($period, $lastRun)
+    {
         if (!$period) {
             return false;             //zero means disabled
         }
@@ -537,7 +598,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *
      * @return string The formatted activity headline.
      */
-    private function getHeadline($activity) {
+    private function getHeadline($activity)
+    {
         if ($activity['HeadlineFormat']) {
             $activity['Url'] = externalUrl($activity['Route'] ?? '/');
             $activity['Data'] = dbdecode($activity['Data']);
@@ -574,13 +636,14 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
      *
      * Copied in most parts from the ActivityModel.
      *
-     * @param int $recipient UserID ID of the user.
+     * @param int $recipientUserID UserID ID of the user.
      * @param array $messages The messages to be sent.
      * @param string $buttonAnchor optional activityID for anchoring template button.
      *
      * @return int One of ActivityModel SENT status.
      */
-    private function sendMessage($recipientUserID, $messages, $buttonAnchor = '') {
+    private function sendMessage($recipientUserID, $messages, $buttonAnchor = '')
+    {
         // Prepare mail
         $actionUrl = Gdn::request()->url('/profile/notifications', true);
         $user = Gdn::userModel()->getID($recipientUserID);
@@ -649,7 +712,8 @@ class NotificationConsolidationPlugin extends Gdn_Plugin {
 *
 * @return string html to include image in notification (or empty string)
 */
-    public function getImage($body) {
+    public function getImage($body)
+    {
         $i = stripos($body, "<img");
         if ($i === false) {
             return '';
@@ -699,7 +763,8 @@ if (!function_exists('touchConfig')) {
      *
      * @deprecated 2.8 Use Gdn_Configuration::touch()
      */
-    function touchConfig($name, $default = null) {
+    function touchConfig($name, $default = null)
+    {
         deprecated(__FUNCTION__, 'Gdn_Configuration::touch()');
         Gdn::config()->touch($name, $default);
     }
