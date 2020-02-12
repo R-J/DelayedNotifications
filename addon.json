@@ -1,11 +1,11 @@
 {
     "type": "addon",
-    "key": "notification-consolidation",
+    "key": "DelayedNotifications",
     "name": "DelayedNotifications",
     "description": "Consolidate and delay all notifaction mails and sends them out after preselected amount of time",
     "license": "MIT",
     "version": "1.0.0",
-    "settingsUrl": "/settings/notificationconsolidation",
+    "settingsUrl": "/settings/DelayedNotifications",
     "pluginUrl": "https://github.com/rbrahmson/DelayedNotifications",
     "authors": [
         {

@@ -1,13 +1,11 @@
 <?php
-class NotificationConsolidationPlugin extends Gdn_Plugin
-{
+class DelayedNotificationsPlugin extends Gdn_Plugin {
     /**
      *  Run on startup to init sane config settings and db changes.
      *
      *  @return void.
      */
-    public function setup()
-    {
+    public function setup() {
         $this->structure();
     }
 
@@ -16,24 +14,23 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      *  @return void.
      */
-    public function structure()
-    {
+    public function structure() {
         touchConfig(
-            'Plugins.NotificationConsolidation.Periods',
+            'Plugins.DelayedNotifications.Periods',
             '12 hours,1 day,2 days,3 days,4 days,5 days,6 days,1 week'
         );
 
         touchConfig(
-            'Plugins.NotificationConsolidation.MinImageSize',
+            'Plugins.DelayedNotifications.MinImageSize',
             '20'
         );
 
-        $secret = Gdn::get('Plugin.NotificationConsolidation.Secret');
+        $secret = Gdn::get('Plugin.DelayedNotifications.Secret');
         if ($secret) {
             return;
         }
         Gdn::set(
-            'Plugin.NotificationConsolidation.Secret',
+            'Plugin.DelayedNotifications.Secret',
             betterRandomString(32, 'aA0')
         );
     }
@@ -45,19 +42,18 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return void.
      */
-    public function settingsController_notificationConsolidation_create($sender)
-    {
+    public function settingsController_delayedNotifications_create($sender) {
         $sender->permission('Garden.Settings.Manage');
         $sender->setHighlightRoute('settings/plugins');
 
         // Ensure there is a secret url available.
         $this->structure();
-        $secret = Gdn::get('Plugin.NotificationConsolidation.Secret');
+        $secret = Gdn::get('Plugin.DelayedNotifications.Secret');
         $url = $sender->Request->url(
-            '/plugin/notificationconsolidation?cron=n&quiet=n&secret='.$secret,
+            '/plugin/DelayedNotifications?cron=n&quiet=n&secret='.$secret,
             true
         );
-        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.NotificationConsolidation.Periods')));
+        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.DelayedNotifications.Periods')));
         // Save period if the form has been posted.
         if ($sender->Form->authenticatedPostBack()) {
             // No need to validate Period as it is a dropdown.
@@ -81,23 +77,23 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             }
             // Save settings and give feedback.
             if ($sender->Form->errorCount() == 0) {
-                Gdn::set('Plugin.NotificationConsolidation.Period', $period);
-                Gdn::set('Plugin.NotificationConsolidation.MaxEmail', $maxEmail);
-                Gdn::set('Plugin.NotificationConsolidation.Extract', $extract);
-                Gdn::set('Plugin.NotificationConsolidation.GetImage', $getImage);
+                Gdn::set('Plugin.DelayedNotifications.Period', $period);
+                Gdn::set('Plugin.DelayedNotifications.MaxEmail', $maxEmail);
+                Gdn::set('Plugin.DelayedNotifications.Extract', $extract);
+                Gdn::set('Plugin.DelayedNotifications.GetImage', $getImage);
                 if ($period == 0) {
-                    Gdn::set('Plugin.NotificationConsolidation.LastRunDate', 0);    //Reset last run
+                    Gdn::set('Plugin.DelayedNotifications.LastRunDate', 0);    //Reset last run
                 }
                 $sender->informMessage(Gdn::translate('Your changes have been saved.'));
             }
         } else {
-            $period = Gdn::get('Plugin.NotificationConsolidation.Period');
-            $maxEmail = Gdn::get('Plugin.NotificationConsolidation.MaxEmail');
-            $extract = Gdn::get('Plugin.NotificationConsolidation.Extract');
-            $getImage = Gdn::get('Plugin.NotificationConsolidation.GetImage');
+            $period = Gdn::get('Plugin.DelayedNotifications.Period');
+            $maxEmail = Gdn::get('Plugin.DelayedNotifications.MaxEmail');
+            $extract = Gdn::get('Plugin.DelayedNotifications.Extract');
+            $getImage = Gdn::get('Plugin.DelayedNotifications.GetImage');
         }
         // Prepare content for the view.
-        $sender->Form->setValue('GetImage', Gdn::get('Plugin.NotificationConsolidation.GetImage'));//Due to weired Vanilla handlingof checkbox...
+        $sender->Form->setValue('GetImage', Gdn::get('Plugin.DelayedNotifications.GetImage'));//Due to weired Vanilla handlingof checkbox...
         $sender->setData([
             'Title' => Gdn::translate('Notification Consolidation Settings'),
             'Description' => Gdn::translate('This plugin stops the immidate sending of notification emails. Instead, you specify a period after which notifications are sent in a single consolidated email.'),
@@ -119,7 +115,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             'GetImageLabel' => Gdn::translate('Include image')
         ]);
 
-        $sender->render('settings', '', 'plugins/notification-consolidation');
+        $sender->render('settings', '', 'plugins/DelayedNotifications');
     }
     /**
      * Profile notification setting for combined notifications.
@@ -128,16 +124,15 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return void.
      */
-    public function profileController_customNotificationPreferences_handler($sender)
-    {
+    public function profileController_customNotificationPreferences_handler($sender) {
         // ugly: mixing view and model!
         $attributes = [];
-        $period = Gdn::get('Plugin.NotificationConsolidation.Period');
-        if ($period == 0) {                     //ignore if disabled
+        $period = Gdn::get('Plugin.DelayedNotifications.Period', -1);
+        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.DelayedNotifications.Periods')));
+        $periodText = Gdn::translate($periodsArray[$period]);
+        if ($periodText == '') {      //ignore if disabled
             return;
         }
-        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.NotificationConsolidation.Periods')));
-        $periodText = Gdn::translate($periodsArray[$period]);
         $periodmessage = sprintf(
             'Check this box to receive all notification emails consolidated over %s ',
             $periodText
@@ -145,11 +140,11 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         if ($sender->Form->authenticatedPostBack()) {
             $sender->UserModel->saveAttribute(
                 $sender->User->UserID,
-                'NotificationConsolidation',
-                $sender->Form->getValue('NotificationConsolidation', false)
+                'DelayedNotifications',
+                $sender->Form->getValue('DelayedNotifications', false)
             );
         } else {
-            if ($sender->User->Attributes['NotificationConsolidation'] ?? false) {
+            if ($sender->User->Attributes['DelayedNotifications'] ?? false) {
                 $attributes = ['checked' => 'checked'];
             }
         }
@@ -157,30 +152,31 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             $periodmessage,
             '</div><div>',
             $sender->Form->checkbox(
-                'NotificationConsolidation',
-                'Consolidate notification mails',
+                'DelayedNotifications',
+                'Consolidate notification emails',
                 $attributes
             ),
             '</div>';
     }
 
     /**
-     * Let notification mails sending fail if user opted for consolidation.
+     * Let notification mails sending be skipped if user opted for consolidation.
      *
      * @param ActivityModel $sender Instance of the calling class.
      * @param Array $args Event arguments.
      *
      * @return void.
      */
-    public function activityModel_beforeSendNotification_handler($sender, $args)
-    {
-        $period = Gdn::get('Plugin.NotificationConsolidation.Period', 24);
-        if ($period == 0) {                 //Don't delay if consolidation is disabled (period=0)
+    public function activityModel_beforeSendNotification_handler($sender, $args) {
+        $period = Gdn::get('Plugin.DelayedNotifications.Period', 24);
+        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.DelayedNotifications.Periods')));
+        $periodText = Gdn::translate($periodsArray[$period]);
+        if ($periodText == '') {        //Don't delay if consolidation is disabled (period=0)
             return;
         }
         // This will cause an ActivityModel::SENT_SKIPPED status in Activity table.
-        if ($args['User']['Attributes']['NotificationConsolidation'] ?? false == true) {
-            Gdn::config()->saveToConfig('Garden.Email.Disabled', true, false);
+        if ($args['User']['Attributes']['DelayedNotifications'] ?? false == true) {
+            Gdn::config()->saveToConfig('Garden.Email.Disabled', true, false);      //in-memory email disabling
         }
     }
     /**
@@ -191,48 +187,48 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return void.
      */
-    public function pluginController_notificationConsolidation_create($sender, $args)
-    {
+    public function pluginController_delayedNotifications_create($sender, $args) {
         $request = $sender->Request->get('secret');
         $force   = ($sender->Request->get('force') == "y");     //force sending emails (ignoring the period & previous emails.For testing)
         $quiet   = ($sender->Request->get('quiet') == "y");     //quiet mode - supress most messages (e.g. for plugin intiated runs)
         $cron    = ($sender->Request->get('cron') == "y");      //cron type runs (some messages are supressed)
         $silence = ($cron || $quiet);                           //Silence MOST messages
-        $secret = Gdn::get('Plugin.NotificationConsolidation.Secret');
+        $secret  = Gdn::get('Plugin.DelayedNotifications.Secret');
         // Check if url has been called with the correct key.
         if ($request != $secret) {
-            $this->msg('Invalid Parameters', false, true);     // force exception & die
+            $this->msg(Gdn::translate('Invalid Parameters'), false, true);     // force exception & die
             //
             return;
         }
         if ($force) {
-            $this->msg('Forced mode. Last run: '.c('Plugins.NotificationConsolidation.LastforcedRun', '?'), $silence);
-            saveToConfig('Plugins.NotificationConsolidation.LastforcedRun', Gdn_Format::toDateTime(Time()));
+            $this->msg(Gdn::translate('Forced mode. Last run: ') . Gdn::config('Plugins.DelayedNotifications.LastforcedRun', '?'), $silence);
+            saveToConfig('Plugins.DelayedNotifications.LastforcedRun', Gdn_Format::toDateTime(Time()));
         }
         // Check if enough time has passed since last run date.
-        $period = Gdn::get('Plugin.NotificationConsolidation.Period', '12 hours');
-        if ($period == 0) {                                                             //Disabled
-            $this->msg('Plugin is disabled when period is set to zero', $quiet);
+        $period = Gdn::get('Plugin.DelayedNotifications.Period', '12 hours');
+        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.DelayedNotifications.Periods')));
+        $periodText = Gdn::translate($periodsArray[$period]);
+        if ($periodText == '') {      //ignore if disabled
+            $this->msg(Gdn::translate('Plugin is disabled when period is set to zero'), $quiet);
             return;
         }
-        $lastRunDate = Gdn::get('Plugin.NotificationConsolidation.LastRunDate', 0);
+        $lastRunDate = Gdn::get('Plugin.DelayedNotifications.LastRunDate', 0);
         $nextTime = $this->nextTime($period, $lastRunDate);       //Next eligible email consolidation time
         if ($lastRunDate == 0) {            //If this was never set NOW is as good as any time...
             $nextTime = time();
-            Gdn::set('Plugin.NotificationConsolidation.LastRunDate', time());
+            Gdn::set('Plugin.DelayedNotifications.LastRunDate', time());
         } elseif ($nextTime >  time()) {                        //Still have more time based on current period
             if ($force) {                                       //However proceed if "force" specified (good for testing)
-                $periodsArray = explode(',', Gdn::config('Plugins.NotificationConsolidation.Periods'));
                 $goback = end($periodsArray);
                 $lastRunDate = strtotime('- '. $goback);        //Simulate "it's time to run"
             } else {
-                $this->msg('Still accummulating notices until:'.Gdn_Format::toDateTime($nextTime), $silence);
+                $this->msg(Gdn::translate('Still accummulating notices until:') . Gdn_Format::toDateTime($nextTime), $silence);
                 return;
             }
         }
         if ($lastRunDate > $nextTime) {                                         //Should never happen
-            $this->msg('last run date too high:'.Gdn_Format::toDateTime($lastRunDate));
-            Gdn::set('Plugin.NotificationConsolidation.LastRunDate', time());   //Fix by resetting last time
+            $this->msg(Gdn::translate('last run date too high:') . Gdn_Format::toDateTime($lastRunDate));
+            Gdn::set('Plugin.DelayedNotifications.LastRunDate', time());   //Fix by resetting last time
             return;                                                             //but wait for next scheduled run
         }
         // Get _all_ open activities.
@@ -246,7 +242,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         );
 //decho(dbdecode(dbencode($unsentActivities)));
         if (!count($unsentActivities)) {                //No unsents?
-            $this->msg('Nothing new to notify', $silence);
+            $this->msg(Gdn::translate('Nothing new to notify'), $silence);
             return;                                     //We're all done here
         }
         $this->msg(
@@ -259,9 +255,9 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         // Group them by user.
         $notifications = [];
         $userModel = Gdn::userModel();
-        $extract = Gdn::get('Plugin.NotificationConsolidation.Extract', false);
-        $getImage = Gdn::get('Plugin.NotificationConsolidation.GetImage', false);
-        $maxEmail = Gdn::get('Plugin.NotificationConsolidation.MaxEmail', 5);
+        $extract = Gdn::get('Plugin.DelayedNotifications.Extract', false);
+        $getImage = Gdn::get('Plugin.DelayedNotifications.GetImage', false);
+        $maxEmail = Gdn::get('Plugin.DelayedNotifications.MaxEmail', 5);
         $sentCount = 0;                                                     //Count sent emails
         foreach ($unsentActivities as $activity) {
             if (!isset($buttonAnchor[$activity['NotifyUserID']])) {
@@ -273,7 +269,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             if ($user->Banned == true ||
                     $user->Deleted == true ||
                     $user->DateLastActive < Gdn_Format::toDateTime(strtotime('-2 years')) ||
-                    $user->Attributes['NotificationConsolidation'] == false
+                    $user->Attributes['DelayedNotifications'] == false
                 ) {
                 $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);    //These inactives shouldn't be processed again
                 continue;
@@ -283,7 +279,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         $inQueue = count($notifications);
 //decho ($inQueue);
         if (!$inQueue) {                                //No users to notify?
-            $this->msg('No users to notify', $silence);
+            $this->msg(Gdn::translate('No users to notify'), $silence);
             return;                                     //We're all done here
         }
 //decho(dbdecode(dbencode($notifications)));
@@ -298,13 +294,17 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         );
         foreach ($notifications as $userID => $activities) {
 //decho(dbdecode(dbencode($activities)));
+            //Extract category view permissions array (one time for all discussion/comment type notifications for the notified user)
+            $userPermissions = dbdecode(dbencode(Gdn::userModel()->getPermissions($userID)))["permissions"]["discussions.view"];
+            //
             $streamCount = 0;
             foreach ($activities as $activity) {
                 $story = false;
                 $skip = false;                      //Few reasons to skip: discussion/comment deleted, originator is the one to be notified...
                 $message = '';
                 if ($activity['ActivityUserID'] == $activity['NotifyUserID']) {
-                    $this->msg('skipping:ActivityUserID = NotifyUserID. id:'.$activity['NotifyUserID']. 'Name:'.$user->Name, $silence);
+                    $this->msg(Gdn::translate('skipping:ActivityUserID = NotifyUserID. id:') .
+                                $activity['NotifyUserID'] . Gdn::translate('Name:').$user->Name, $silence);
                     $skip = true;
                 }
                 if ($activity['NotifyUserID'] == $activity['InsertUserID']) {
@@ -313,10 +313,12 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
                 }
                 $image = '';
                 $extractText = '';
-                $object = $this->getObject($activity);
+                $object = $this->getObject($activity, $userPermissions);
                 if ($object == false) {
                     $skip = true;                               //Presume object was deleted since notification was queued
                     $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);    //This shouldn't be processed again
+                } elseif ($object == -2) {                      //Notified user has no view permission so don't notify
+                    $skip = true;
                 } elseif ($object == -1) {                      //Special handling for other notifications
                     $photo = $activity['Photo'];
                 } else {                                        //Handling of discussion/comment notifications
@@ -324,7 +326,6 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
                     if ($photo && !isUrl($photo)) {
                         $photo = Gdn_Upload::url(changeBasename($photo, 'n%s'));
                     }
-                                                                                                                           
                     if ($photo && isUrl($photo)) {
                     } else {
                         $photo = userPhotoDefaultUrl(Gdn::userModel()->getID($activity['InsertUserID']));  //Suppport avatars;
@@ -352,7 +353,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
                         foreach ($activities as $activity) {                                 //Mark all related activities as emailed
                             $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);
                         }
-                        Gdn::set('Plugin.NotificationConsolidation.LastRunDate', time());   //Update last run date to restart period counting
+                        Gdn::set('Plugin.DelayedNotifications.LastRunDate', time());   //Update last run date to restart period counting
                     }
                 }
                 $sentCount += 1;
@@ -400,8 +401,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return string formatted notification.
      */
-    private function formatMessage($date, $photo, $object, $getImage, $extract, $headline, $story)
-    {
+    private function formatMessage($date, $photo, $object, $getImage, $extract, $headline, $story) {
         // Not counting on css for the resulting email system
         $message = '<table width="98%" cellspacing="0" cellpadding="0" border="0" margin-bottom: 10px;><colgroup><col style="vertical-align: top;"><col></colgroup><tr>';
         if (trim($photo) && substr($photo, 0, 4) == 'http') {
@@ -484,8 +484,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return void
      */
-    private function msg($text, $quiet = false, $die = false)
-    {
+    private function msg($text, $quiet = false, $die = false) {
         if ($die) {
             echo '<br>' . "\r\n" . Gdn::translate($text);           //just in case it's a cron job
             throw new NotFoundException('<h4>--- ' . __CLASS__ . '</h4><h3>' . Gdn::translate($text) . ' ---</h3>');
@@ -499,24 +498,40 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
    /**
      * Get content object (Discussion or Comment).
      *
-     * @param array $activity An activity data record.
+     * @param array $activity an activity data record.
+     * @param array $userPermissions user category access permissions.
      *
-     * @return object (or -1 if not discussion/comment, false if not found)
+     * @return object (or -1 if not discussion/comment, -2 if no access, false if not found)
      */
-    private function getObject($activity)
-    {
+    private function getObject($activity, $userPermissions) {
+        $discussionModel = new DiscussionModel();
         if ($activity['RecordType'] == 'Discussion') {
-            $recordModel = new DiscussionModel();
+            $discussion = $discussionModel->getID($activity['RecordID']);
+            if (!$discussion) {                     //discussion deleted was after it was created
+                return false;                       //indicate not available
+            }
+            if (!in_array($discussion->CategoryID, $userPermissions)) { //User not allowed to where discussion currently resides
+                return -2;                         //indicate not accessible
+            }
+            return $discussion;
         } elseif ($activity['RecordType'] == 'Comment') {
-            $recordModel = new CommentModel();
+            $commentModel = new CommentModel();
+            $comment = $commentModel->getID($activity['RecordID']);
+            if (!$comment) {                        //comment deleted was after it was created
+                return false;                       //indicate not available
+            }
+            //
+            $discussion = $discussionModel->getID($comment->DiscussionID);   //Get comment parent discussion
+            if (!$discussion) {                     //unlikely model inconsistency (defensive programming...)
+                return false;                       //indicate not available
+            }
+            if (!in_array($discussion->CategoryID, $userPermissions)) { //User not allowed to where discussion currently resides
+                return -2;                         //indicate not accessible
+            }
+            return $comment;
         } else {
             return -1;
         }
-        $object = $recordModel->getID($activity['RecordID']);
-        if ($object) {
-            return $object;
-        }
-        return false;
     }
    /**
      * Get text extract from Discussion or Comment.
@@ -526,11 +541,10 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return string
      */
-    private function getExtract($string, $length)
-    {
+    private function getExtract($string, $length) {
         $string = $this->deleteBetweenTags('<div class="Spoiler">', '</div>', $string, ' ... ', true); //Replace text within spoiler tags with " ... "
         $extractText = sliceString(preg_replace('/\s+/', ' ', strip_tags($string, '<i><b><br>')), $length);
-        $virtualEnd = c('Plugins.Extract.virtualEnd', '');
+        $virtualEnd = Gdn::config('Plugins.Extract.virtualEnd', '');
         if ($virtualEnd) {                                              //Extract plugin set content virtual end (tag to stop extract?)?
             $extractText = explode($virtualEnd, $extractText)[0];       //So truncate to that point
         }
@@ -547,8 +561,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return string
      */
-    private function deleteBetweenTags($starttag, $endtag, $string, $replace = '', $all = false)
-    {
+    private function deleteBetweenTags($starttag, $endtag, $string, $replace = '', $all = false) {
         $startPos = strpos($string, $starttag);
         if ($startPos === false) {
             return $string;
@@ -574,12 +587,12 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return int time of next eligible run time
      */
-    private function nextTime($period, $lastRun)
-    {
-        if (!$period) {
+    private function nextTime($period, $lastRun) {
+        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.DelayedNotifications.Periods')));
+        $periodText = Gdn::translate($periodsArray[$period]);
+        if ($periodText == '') {      //ignore if disabled
             return false;             //zero means disabled
         }
-        $periodsArray = explode(',', Gdn::config('Plugins.NotificationConsolidation.Periods'));
         // array must be strtotime eligible...
         //  e.g. 2 hours,6 hours,12 hours,24 hours,2 days,3 days,4 days,5 days,6 days,1 week
         $datetime = new DateTime();
@@ -598,8 +611,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return string The formatted activity headline.
      */
-    private function getHeadline($activity)
-    {
+    private function getHeadline($activity) {
         if ($activity['HeadlineFormat']) {
             $activity['Url'] = externalUrl($activity['Route'] ?? '/');
             $activity['Data'] = dbdecode($activity['Data']);
@@ -642,22 +654,21 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
      *
      * @return int One of ActivityModel SENT status.
      */
-    private function sendMessage($recipientUserID, $messages, $buttonAnchor = '')
-    {
+    private function sendMessage($recipientUserID, $messages, $buttonAnchor = '') {
         // Prepare mail
         $actionUrl = Gdn::request()->url('/profile/notifications', true);
         $user = Gdn::userModel()->getID($recipientUserID);
-        $lastRunDate = Gdn_Format::toDateTime(Gdn::get('Plugin.NotificationConsolidation.LastRunDate', 0));
+        $lastRunDate = Gdn_Format::toDateTime(Gdn::get('Plugin.DelayedNotifications.LastRunDate', 0));
         $email = new Gdn_Email();
-        $period = Gdn::get('Plugin.NotificationConsolidation.Period');
-        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.NotificationConsolidation.Periods')));
+        $period = Gdn::get('Plugin.DelayedNotifications.Period');
+        $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.DelayedNotifications.Periods')));
         $periodText = Gdn::translate($periodsArray[$period]);
         $email->subject(
             sprintf(
                 Gdn::translate('[%1$s] %2$s'),
                 Gdn::config('Garden.Title'),
                 sprintf(
-                    Gdn::translate('NotificationConsolidation.EmailSubject'),
+                    Gdn::translate('DelayedNotifications.EmailSubject'),
                     $lastRunDate,
                     $periodText
                 )
@@ -672,7 +683,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             ->setTitle(
                 wrap(
                     sprintf(
-                        Gdn::translate('NotificationConsolidation.EmbeddedTitle'),
+                        Gdn::translate('DelayedNotifications.EmbeddedTitle'),
                         $lastRunDate,
                         $periodText
                     ),
@@ -683,7 +694,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
             ->setMessage($messages, true);
         $this->EventArguments['Messages'] = $email;
         $this->EventArguments['Email'] = $email;
-        $this->fireEvent('BeforeSendNotificationConsolidation');
+        $this->fireEvent('BeforeSendDelayedNotifications');
 
         try {
             $email->send();
@@ -712,8 +723,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
 *
 * @return string html to include image in notification (or empty string)
 */
-    public function getImage($body)
-    {
+    public function getImage($body) {
         $i = stripos($body, "<img");
         if ($i === false) {
             return '';
@@ -743,7 +753,7 @@ class NotificationConsolidationPlugin extends Gdn_Plugin
         }
         $size = getimagesize($imageUrl);
         //Ignore smallimages (oftentimes "like"-like buttons)
-        $minImageSize = Gdn::config('Plugins.NotificationConsolidation.MinImageSize', "20");
+        $minImageSize = Gdn::config('Plugins.DelayedNotifications.MinImageSize', "20");
         if ($size[0] < $minImageSize || $size[1] < $minImageSize) {
             return '';
         }
@@ -763,8 +773,7 @@ if (!function_exists('touchConfig')) {
      *
      * @deprecated 2.8 Use Gdn_Configuration::touch()
      */
-    function touchConfig($name, $default = null)
-    {
+    function touchConfig($name, $default = null) {
         deprecated(__FUNCTION__, 'Gdn_Configuration::touch()');
         Gdn::config()->touch($name, $default);
     }
