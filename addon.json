@@ -1,20 +1,23 @@
 {
     "type": "addon",
     "key": "notification-consolidation",
-    "name": "Notification Consolidation",
-    "description": "Consolidates all notifaction mails and sends them out once a day",
+    "name": "DelayedNotifications",
+    "description": "Consolidate and delay all notifaction mails and sends them out after preselected amount of time",
     "license": "MIT",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "settingsUrl": "/settings/notificationconsolidation",
-    "pluginUrl": "https://github.com/r-j/rj-notification-consolidation",
+    "pluginUrl": "https://github.com/rbrahmson/DelayedNotifications",
     "authors": [
         {
-            "name": "Robin Jurinka",
-            "homepage": "https://open.vanillaforums.com/profile/r_j"
+            "name": "Roger Brahmson and Robin Jurinka",
+            "homepage": [
+                         "https://open.vanillaforums.com/profile/r_j",
+                         "https://open.vanillaforums.com/profile/rbrahmson"
+                        ]
         }
     ],
     "priority": 10,
-    "className": "NotificationConsolidationPlugin",
+    "className": "DelayedNotificationsPlugin",
     "hasLocale": true,
     "mobileFriendly": true,
     "usePopupSettings": true,
