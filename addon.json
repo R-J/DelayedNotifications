@@ -9,11 +9,12 @@
     "pluginUrl": "https://github.com/rbrahmson/DelayedNotifications",
     "authors": [
         {
-            "name": "Roger Brahmson and Robin Jurinka",
-            "homepage": [
-                         "https://open.vanillaforums.com/profile/r_j",
-                         "https://open.vanillaforums.com/profile/rbrahmson"
-                        ]
+            "name": "Roger Brahmson",
+            "homepage": "https://open.vanillaforums.com/profile/rbrahmson"
+        },
+        {
+            "name": "Robin Jurinka",
+            "homepage": "https://open.vanillaforums.com/profile/r_j"
         }
     ],
     "priority": 10,
