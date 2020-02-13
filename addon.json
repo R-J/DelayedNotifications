@@ -2,22 +2,22 @@
     "type": "addon",
     "key": "DelayedNotifications",
     "name": "DelayedNotifications",
-    "description": "Consolidate and delay all notifaction mails and sends them out after preselected amount of time",
+    "description": "Consolidate and delay all notifaction emails and send them out after preselected amount of time",
     "license": "MIT",
     "version": "1.0.0",
     "settingsUrl": "/settings/DelayedNotifications",
     "pluginUrl": "https://github.com/rbrahmson/DelayedNotifications",
     "authors": [
         {
-            "name": "Roger Brahmson",
-            "homepage": "https://open.vanillaforums.com/profile/rbrahmson"
-        },
-        {
             "name": "Robin Jurinka",
             "homepage": "https://open.vanillaforums.com/profile/r_j"
+        },
+        {
+            "name": "Roger Brahmson",
+            "homepage": "https://open.vanillaforums.com/profile/rbrahmson"
         }
     ],
-    "priority": 10,
+    "priority": 11,
     "className": "DelayedNotificationsPlugin",
     "hasLocale": true,
     "mobileFriendly": true,
