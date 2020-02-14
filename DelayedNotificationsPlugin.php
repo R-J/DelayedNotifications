@@ -1,4 +1,5 @@
 <?php
+
 class DelayedNotificationsPlugin extends Gdn_Plugin {
     /**
      *  Run on startup to init sane config settings and db changes.
@@ -92,8 +93,10 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
             $extract = Gdn::get('Plugin.DelayedNotifications.Extract');
             $getImage = Gdn::get('Plugin.DelayedNotifications.GetImage');
         }
+
         // Prepare content for the view.
-        $sender->Form->setValue('GetImage', Gdn::get('Plugin.DelayedNotifications.GetImage'));//Due to weired Vanilla handlingof checkbox...
+        // Due to weired Vanilla handlingof checkbox...
+        $sender->Form->setValue('GetImage', Gdn::get('Plugin.DelayedNotifications.GetImage'));
         $sender->setData([
             'Title' => Gdn::translate('Notification Consolidation Settings'),
             'Description' => Gdn::translate('This plugin stops the immidate sending of notification emails. Instead, you specify a period after which notifications are sent in a single consolidated email.'),
@@ -117,6 +120,7 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
 
         $sender->render('settings', '', 'plugins/DelayedNotifications');
     }
+
     /**
      * Profile notification setting for combined notifications.
      *
@@ -179,6 +183,7 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
             Gdn::config()->saveToConfig('Garden.Email.Disabled', true, false);      //in-memory email disabling
         }
     }
+
     /**
      * Process accummulated notifications.
      *
@@ -189,15 +194,19 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
      */
     public function pluginController_delayedNotifications_create($sender, $args) {
         $request = $sender->Request->get('secret');
-        $force   = ($sender->Request->get('force') == "y");     //force sending emails (ignoring the period & previous emails.For testing)
-        $quiet   = ($sender->Request->get('quiet') == "y");     //quiet mode - supress most messages (e.g. for plugin intiated runs)
-        $cron    = ($sender->Request->get('cron') == "y");      //cron type runs (some messages are supressed)
-        $silence = ($cron || $quiet);                           //Silence MOST messages
+        // Force sending emails (ignoring the period & previous emails.For testing).
+        $force = ($sender->Request->get('force') == "y");
+        // Quiet mode - supress most messages (e.g. for plugin intiated runs).
+        $quiet = ($sender->Request->get('quiet') == "y");
+        // Cron type runs (some messages are supressed).
+        $cron = ($sender->Request->get('cron') == "y");
+        // Silence MOST messages.
+        $silence = ($cron || $quiet);
         $secret  = Gdn::get('Plugin.DelayedNotifications.Secret');
         // Check if url has been called with the correct key.
         if ($request != $secret) {
-            $this->msg(Gdn::translate('Invalid Parameters'), false, true);     // force exception & die
-            //
+            // Force exception & die.
+            $this->msg(Gdn::translate('Invalid Parameters'), false, true);
             return;
         }
         if ($force) {
@@ -208,42 +217,54 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
         $period = Gdn::get('Plugin.DelayedNotifications.Period', '12 hours');
         $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.DelayedNotifications.Periods')));
         $periodText = Gdn::translate($periodsArray[$period]);
-        if ($periodText == '') {      //ignore if disabled
+        // Ignore if disabled.
+        if ($periodText == '') {
             $this->msg(Gdn::translate('Plugin is disabled when period is set to zero'), $quiet);
             return;
         }
         $lastRunDate = Gdn::get('Plugin.DelayedNotifications.LastRunDate', 0);
-        $nextTime = $this->nextTime($period, $lastRunDate);       //Next eligible email consolidation time
-        if ($lastRunDate == 0) {            //If this was never set NOW is as good as any time...
+        // Next eligible email consolidation time.
+        $nextTime = $this->nextTime($period, $lastRunDate);
+        // If this was never set NOW is as good as any time...
+        if ($lastRunDate == 0) {
             $nextTime = time();
             Gdn::set('Plugin.DelayedNotifications.LastRunDate', time());
-        } elseif ($nextTime >  time()) {                        //Still have more time based on current period
-            if ($force) {                                       //However proceed if "force" specified (good for testing)
+        } elseif ($nextTime >  time()) {
+            // Still have more time based on current period.
+            if ($force) {
+                // However proceed if "force" specified (good for testing).
                 $goback = end($periodsArray);
-                $lastRunDate = strtotime('- '. $goback);        //Simulate "it's time to run"
+                // Simulate "it's time to run".
+                $lastRunDate = strtotime('- '. $goback);
             } else {
                 $this->msg(Gdn::translate('Still accummulating notices until:') . Gdn_Format::toDateTime($nextTime), $silence);
                 return;
             }
         }
-        if ($lastRunDate > $nextTime) {                                         //Should never happen
+        // Should never happen.
+        if ($lastRunDate > $nextTime) {
             $this->msg(Gdn::translate('last run date too high:') . Gdn_Format::toDateTime($lastRunDate));
-            Gdn::set('Plugin.DelayedNotifications.LastRunDate', time());   //Fix by resetting last time
-            return;                                                             //but wait for next scheduled run
+            // Fix by resetting last time.
+            Gdn::set('Plugin.DelayedNotifications.LastRunDate', time());
+            // But wait for next scheduled run.
+            return;
         }
         // Get _all_ open activities.
         $model = new ActivityModel();
         $unsentActivities = $model->getWhere(
             [
-                'Emailed' => $model::SENT_SKIPPED,/*   No need for date filter-- email status is all we need
-                'DateInserted > ' => Gdn_Format::toDateTime($lastRunDate)*/
+                'Emailed' => $model::SENT_SKIPPED,
+                // No need for date filter-- email status is all we need
+                // 'DateInserted > ' => Gdn_Format::toDateTime($lastRunDate)
             ],
             'NotifyUserID, DateInserted'
         );
-//decho(dbdecode(dbencode($unsentActivities)));
-        if (!count($unsentActivities)) {                //No unsents?
+
+        // No unsents?
+        if (!count($unsentActivities)) {
             $this->msg(Gdn::translate('Nothing new to notify'), $silence);
-            return;                                     //We're all done here
+            // We're all done here.
+            return;
         }
         $this->msg(
             sprintf(
@@ -258,7 +279,8 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
         $extract = Gdn::get('Plugin.DelayedNotifications.Extract', false);
         $getImage = Gdn::get('Plugin.DelayedNotifications.GetImage', false);
         $maxEmail = Gdn::get('Plugin.DelayedNotifications.MaxEmail', 5);
-        $sentCount = 0;                                                     //Count sent emails
+        // Count sent emails.
+        $sentCount = 0;
         foreach ($unsentActivities as $activity) {
             if (!isset($buttonAnchor[$activity['NotifyUserID']])) {
                 $buttonAnchor[$activity['NotifyUserID']] = $activity['ActivityID'];
@@ -271,20 +293,23 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
                     $user->DateLastActive < Gdn_Format::toDateTime(strtotime('-2 years')) ||
                     $user->Attributes['DelayedNotifications'] == false
                 ) {
-                $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);    //These inactives shouldn't be processed again
+                // These inactives shouldn't be processed again.
+                $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);
                 continue;
             }
             $notifications[$user->UserID][] = $activity;
         }
         $inQueue = count($notifications);
-//decho ($inQueue);
-        if (!$inQueue) {                                //No users to notify?
+
+        if (!$inQueue) {
+            // No users to notify?
             $this->msg(Gdn::translate('No users to notify'), $silence);
-            return;                                     //We're all done here
+            // We're all done here.
+            return;
         }
-//decho(dbdecode(dbencode($notifications)));
+
         // For each user we'll concatenate activities notifications into one message stream
-        $messageStream = '';                            //Combined message stream
+        $messageStream = '';
         $this->msg(
             sprintf(
                 Gdn::translate('Processing %1$s users'),
@@ -293,14 +318,15 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
             $silence
         );
         foreach ($notifications as $userID => $activities) {
-//decho(dbdecode(dbencode($activities)));
-            //Extract category view permissions array (one time for all discussion/comment type notifications for the notified user)
+            // Extract category view permissions array (one time for all
+            // discussion/comment type notifications for the notified user)
             $userPermissions = dbdecode(dbencode(Gdn::userModel()->getPermissions($userID)))["permissions"]["discussions.view"];
-            //
             $streamCount = 0;
             foreach ($activities as $activity) {
                 $story = false;
-                $skip = false;                      //Few reasons to skip: discussion/comment deleted, originator is the one to be notified...
+                // Few reasons to skip: discussion/comment deleted, originator
+                // is the one to be notified...
+                $skip = false;
                 $message = '';
                 if ($activity['ActivityUserID'] == $activity['NotifyUserID']) {
                     $this->msg(Gdn::translate('skipping:ActivityUserID = NotifyUserID. id:') .
@@ -315,20 +341,25 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
                 $extractText = '';
                 $object = $this->getObject($activity, $userPermissions);
                 if ($object == false) {
-                    $skip = true;                               //Presume object was deleted since notification was queued
-                    $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);    //This shouldn't be processed again
-                } elseif ($object == -2) {                      //Notified user has no view permission so don't notify
+                    // Presume object was deleted since notification was queued.
                     $skip = true;
-                } elseif ($object == -1) {                      //Special handling for other notifications
+                    $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);    // This shouldn't be processed again.
+                } elseif ($object == -2) {
+                    // Notified user has no view permission so don't notify.
+                    $skip = true;
+                } elseif ($object == -1) {
+                    // Special handling for other notifications.
                     $photo = $activity['Photo'];
-                } else {                                        //Handling of discussion/comment notifications
+                } else {
+                   // Handling of discussion/comment notifications.
                     $photo = Gdn::userModel()->getID($activity['InsertUserID'])->Photo;
                     if ($photo && !isUrl($photo)) {
                         $photo = Gdn_Upload::url(changeBasename($photo, 'n%s'));
                     }
                     if ($photo && isUrl($photo)) {
                     } else {
-                        $photo = userPhotoDefaultUrl(Gdn::userModel()->getID($activity['InsertUserID']));  //Suppport avatars;
+                        // Suppport avatars.
+                        $photo = userPhotoDefaultUrl(Gdn::userModel()->getID($activity['InsertUserID']));
                     }
                 }
                 if (!$skip) {
@@ -341,19 +372,22 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
                         $this->getHeadline($activity),
                         $story
                     );
-                    $messageStream .= wrap($message, 'div'); //accummulate message stream that goes in one email
+                    // Accummulate message stream that goes in one email.
+                    $messageStream .= wrap($message, 'div');
                     $streamCount += 1;
                 }
             }
-            //  Send the accummulated messages
+            //  Send the accummulated messages.
             if ($streamCount && $sentCount <= $maxEmail) {
-//decho (' force:'.$force.' sentcount:'.$sentCount.' inqueue:'.$inQueue.' maxemail:'.$maxEmail.' userID:'.$userID);
-                if ($this->sendMessage($userID, $messageStream, $buttonAnchor[$userID]) == ActivityModel::SENT_OK) {  //successful send?
+                if ($this->sendMessage($userID, $messageStream, $buttonAnchor[$userID]) == ActivityModel::SENT_OK) {
+                    // Successful send?
                     if (!$force) {
-                        foreach ($activities as $activity) {                                 //Mark all related activities as emailed
+                        // Mark all related activities as emailed.
+                        foreach ($activities as $activity) {
                             $model->setProperty($activity['ActivityID'], 'Emailed', ActivityModel::SENT_OK);
                         }
-                        Gdn::set('Plugin.DelayedNotifications.LastRunDate', time());   //Update last run date to restart period counting
+                        // Update last run date to restart period counting.
+                        Gdn::set('Plugin.DelayedNotifications.LastRunDate', time());
                     }
                 }
                 $sentCount += 1;
@@ -376,7 +410,8 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
                     $endmsg,
                     $quiet
                 );
-                return;       //We're all done here
+                // We're all done here.
+                return;
             }
         }
         $this->msg(
@@ -388,8 +423,12 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
         );
     }
     /**
-     * Format individual message.   All formatting is done here since email systems have their own styles and we can't use css.
-     * Gmail, Yahoo and other email systems also strip various html tags and attributes forcing the unconventional html style coding below.
+     * Format individual message.
+     *
+     * All formatting is done here since email systems have their own styles and
+     * we can't use css.
+     * Gmail, Yahoo and other email systems also strip various html tags and
+     * attributes forcing the unconventional html style coding below.
      *
      * @param string $date notification related date.
      * @param int $photo originator photo.
@@ -435,7 +474,8 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
                      '<table width="98%" cellspacing="0" cellpadding="0" border="0"><colgroup><col style="vertical-align: top;"><col></colgroup><tr>';
         if ($getImage) {
             $leftcolumn = "78px";
-            $image =   $this->getImage($object->Body);      //Try to get embedded image
+            // Try to get embedded image.
+            $image =   $this->getImage($object->Body);
         } else {
             $leftcolumn = "18px";
         }
@@ -449,7 +489,8 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
                         '<span style="border-radius:4px;padding:0px 5px;display: table-cell;">'.
                         ' </td>';
         }
-        if ($extract) {                                     //Get content extract
+        // Get content extract.
+        if ($extract) {
             $extractText = $this->getExtract($object->Body, $extract);
         }
         if ($extractText) {
@@ -492,10 +533,12 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
         if ($quiet) {
             return;
         } else {
-            echo '<br>' . "\r\n" . Gdn::translate($text);           //Format for both online and cron reporting
+            // Format for both online and cron reporting.
+            echo '<br>' . "\r\n" . Gdn::translate($text);
         }
     }
-   /**
+
+    /**
      * Get content object (Discussion or Comment).
      *
      * @param array $activity an activity data record.
@@ -507,33 +550,44 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
         $discussionModel = new DiscussionModel();
         if ($activity['RecordType'] == 'Discussion') {
             $discussion = $discussionModel->getID($activity['RecordID']);
-            if (!$discussion) {                     //discussion deleted was after it was created
-                return false;                       //indicate not available
+            // Discussion deleted was after it was created.
+            if (!$discussion) {
+                // Indicate not available.
+                return false;
             }
-            if (!in_array($discussion->CategoryID, $userPermissions)) { //User not allowed to where discussion currently resides
-                return -2;                         //indicate not accessible
+            // User not allowed to where discussion currently resides.
+            if (!in_array($discussion->CategoryID, $userPermissions)) {
+                // Indicate not accessible.
+                return -2;
             }
             return $discussion;
         } elseif ($activity['RecordType'] == 'Comment') {
             $commentModel = new CommentModel();
             $comment = $commentModel->getID($activity['RecordID']);
-            if (!$comment) {                        //comment deleted was after it was created
-                return false;                       //indicate not available
+            // Comment deleted was after it was created.
+            if (!$comment) {
+                // Indicate not available.
+                return false;
             }
-            //
-            $discussion = $discussionModel->getID($comment->DiscussionID);   //Get comment parent discussion
-            if (!$discussion) {                     //unlikely model inconsistency (defensive programming...)
-                return false;                       //indicate not available
+            // Get comment parent discussion.
+            $discussion = $discussionModel->getID($comment->DiscussionID);
+            if (!$discussion) {
+                // Unlikely model inconsistency (defensive programming...).
+                // Indicate not available.
+                return false;
             }
-            if (!in_array($discussion->CategoryID, $userPermissions)) { //User not allowed to where discussion currently resides
-                return -2;                         //indicate not accessible
+            // User not allowed to where discussion currently resides.
+            if (!in_array($discussion->CategoryID, $userPermissions)) {
+                // Indicate not accessible
+                return -2;
             }
             return $comment;
         } else {
             return -1;
         }
     }
-   /**
+
+    /**
      * Get text extract from Discussion or Comment.
      *
      * @param string $string discussion or comment body text.
@@ -542,15 +596,19 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
      * @return string
      */
     private function getExtract($string, $length) {
-        $string = $this->deleteBetweenTags('<div class="Spoiler">', '</div>', $string, ' ... ', true); //Replace text within spoiler tags with " ... "
+        // Replace text within spoiler tags with " ... "
+        $string = $this->deleteBetweenTags('<div class="Spoiler">', '</div>', $string, ' ... ', true);
         $extractText = sliceString(preg_replace('/\s+/', ' ', strip_tags($string, '<i><b><br>')), $length);
         $virtualEnd = Gdn::config('Plugins.Extract.virtualEnd', '');
-        if ($virtualEnd) {                                              //Extract plugin set content virtual end (tag to stop extract?)?
-            $extractText = explode($virtualEnd, $extractText)[0];       //So truncate to that point
+        // Extract plugin set content virtual end (tag to stop extract?)?
+        if ($virtualEnd) {
+            // So truncate to that point.
+            $extractText = explode($virtualEnd, $extractText)[0];
         }
         return $extractText;
     }
-   /**
+
+    /**
      * Remove all text between specified tags.
      *
      * @param string $starttag Starting tag.
@@ -572,13 +630,16 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
         } else {
             $endPos = $endPos + strlen($endtag);
         }
-        $result = substr($string, 0, $startPos) . $replace . substr($string, ($endPos));         //Mark removed content with replacement
+        // Mark removed content with replacement.
+        $result = substr($string, 0, $startPos) . $replace . substr($string, ($endPos));
         if ($all) {
-            return $this->deleteBetweenTags($starttag, $endtag, $result, $replace, $all);       // recursion to replace all occurences
+            // Recursion to replace all occurences.
+            return $this->deleteBetweenTags($starttag, $endtag, $result, $replace, $all);
         } else {
             return $result;
         }
     }
+
     /**
      * Calclulate next eligible email notification time based on passed period index nd last run.
      *
@@ -590,14 +651,17 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
     private function nextTime($period, $lastRun) {
         $periodsArray = explode(',', Gdn::translate(Gdn::config('Plugins.DelayedNotifications.Periods')));
         $periodText = Gdn::translate($periodsArray[$period]);
-        if ($periodText == '') {      //ignore if disabled
-            return false;             //zero means disabled
+        // Ignore if disabled.
+        if ($periodText == '') {
+            // Zero means disabled
+            return false;
         }
         // array must be strtotime eligible...
-        //  e.g. 2 hours,6 hours,12 hours,24 hours,2 days,3 days,4 days,5 days,6 days,1 week
+        // e.g. 2 hours,6 hours,12 hours,24 hours,2 days,3 days,4 days,5 days,6 days,1 week
         $datetime = new DateTime();
         $datetime->setTimestamp($lastRun);
-        $datetime->modify('+' . $periodsArray[$period]);     //Next eligible time
+        // Next eligible time.
+        $datetime->modify('+' . $periodsArray[$period]);
         $nextTime = strtotime($datetime->format('Y-m-d H:i:s'));
         return ($nextTime);
     }
@@ -716,25 +780,26 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
         }
         return $emailed;
     }
+
     /**
-* Return first embedded image in dicussion/comment body.
-*
-* @param object $body standard
-*
-* @return string html to include image in notification (or empty string)
-*/
+     * Return first embedded image in dicussion/comment body.
+     *
+     * @param object $body standard
+     *
+     * @return string html to include image in notification (or empty string)
+     */
     public function getImage($body) {
         $i = stripos($body, "<img");
         if ($i === false) {
             return '';
-        }        //
+        }
         $image = substr($body, $i+4);
         $i = stripos($image, ">");
         if ($i === false) {
             return '';
         }
         $image = substr($image, 0, $i);
-        //
+        
         $imageUrl = $image;
         $i = stripos($imageUrl, "src=");
         if ($i === false) {
@@ -749,10 +814,11 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
                 $imageUrl = substr($imageUrl, 0, $i);
             }
         } else {
-            return '';          //Can't trust local references in remote email system
+            // Can't trust local references in remote email system.
+            return '';
         }
         $size = getimagesize($imageUrl);
-        //Ignore smallimages (oftentimes "like"-like buttons)
+        // Ignore smallimages (oftentimes "like"-like buttons)
         $minImageSize = Gdn::config('Plugins.DelayedNotifications.MinImageSize', "20");
         if ($size[0] < $minImageSize || $size[1] < $minImageSize) {
             return '';
@@ -763,18 +829,14 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
 
 if (!function_exists('touchConfig')) {
     /**
-     * Make sure the config has a setting.
+     * Duplication of the deprecated touchConfig function.
      *
-     * This function is useful to call in the setup/structure of plugins to
-     * make sure they have some default config set.
+     * Just included to provide version 2.8 compatibility.
      *
      * @param string|array $name The name of the config key or an array of config key value pairs.
      * @param mixed $default The default value to set in the config.
-     *
-     * @deprecated 2.8 Use Gdn_Configuration::touch()
      */
     function touchConfig($name, $default = null) {
-        deprecated(__FUNCTION__, 'Gdn_Configuration::touch()');
         Gdn::config()->touch($name, $default);
     }
 }
