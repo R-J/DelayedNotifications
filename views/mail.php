@@ -1,12 +1,4 @@
-<?php defined('APPLICATION') or die;
-
-$photo = $this->data('Photo', false);
-$image = $this->data('Image', false);
-$commentText = $this->data('CommentText', false);
-$extractText = $this->data('ExtractText', false);
-$prefix = $this->data('Prefix', false);
-
-?>
+<?php defined('APPLICATION') or die; ?>
 <span style="border:3px none #0074d966;border-bottom-style:solid;display:block;width:98%;white-space:break-spaces;padding: 3px 0px;line-height: 1;">
 <table width="98%" cellspacing="0" cellpadding="0" border="0" margin-bottom: 10px;>
     <colgroup>
@@ -25,10 +17,10 @@ $prefix = $this->data('Prefix', false);
         <?php endif ?>
         <td>
             <span style="vertical-align: middle;">
-                <?= $this->data('Headline') ?>
+                <?= $headline ?>
             </span>
             <br>
-            <?= $this->data('On') ?>
+            <?= $onDate ?>
         </td>
     </tr>
 </table>
@@ -62,7 +54,7 @@ $prefix = $this->data('Prefix', false);
             <?= $extractText ?>
         </td>
         <?php else: ?>
-        <td><?= $this->data('Story', '') ?></td>
+        <td><?= $story ?></td>
         <?php endif ?>
     </tr>
 </table>

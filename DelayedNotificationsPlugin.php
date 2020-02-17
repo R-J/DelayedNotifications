@@ -437,12 +437,13 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
      *
      * @return string formatted notification.
      */
-    private function formatMail($date, $photo, $object, $getImage, $extract, $headline, $story) {
-        if (trim($photo) && substr($photo, 0, 4) == 'http') {
-            $sender->setData('Photo', $photo);
+    private function formatMail($date, $photo, $object, $getImage = true, $extract = 50, $headline = '', $story = '') {
+        if (!(trim($photo) && substr($photo, 0, 4) == 'http')) {
+            $photo = false;
         }
+        $image = false;
         if ($getImage) {
-            $sender->setData('Image', $this->getImage($object->Body));
+            $image = $this->getImage($object->Body);
         }
 
         // Get content extract.
@@ -456,14 +457,8 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
             $commentText = Gdn::translate('Comment').':';
         }
 
-        $sender->setData([
-            'Headline' => $headline,
-            'On' => sprintf(Gdn::translate('on %s'), $date),
-            'Prefix' => $object->Prefix,
-            'ExtractText' => $extractText,
-            'CommentText' => $commentText,
-            'Story' => $story
-        ]);
+        $onDate = sprintf(Gdn::translate('on %s'), $date);
+        $prefix = $object->Prefix;
         ob_start();
         include(Gdn::controller()->fetchViewLocation('mail', '', 'plugins/DelayedNotifications'));
         return ob_get_clean();
@@ -873,11 +868,19 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
         return $imageUrl;
     }
 
-    public function pluginController_deNoTest_create($sender, $args) {
+    /**
+     * Test method for ensuring successfull refactoring.
+     *
+     * @param VanillaController $sender Instance of the calling class.
+     * @param mixed $args
+     *
+     * @return void.
+     */
+    public function vanillaController_dnt_create($sender, $args) {
         // Test data for formatMessage/formatMail
         $date = 'yesterday'; //  notification related date.
         $photo = ''; // originator photo.
-        $object = (obj)['CommentID' => 33] //Discussion or Comment object.
+        $object = (object)['CommentID' => 33]; //Discussion or Comment object.
         $getImage = true; // Request to include image.
         $extract = 50; // Size of text extract
         $headline = 'This is the Headline'; // notification headline.
