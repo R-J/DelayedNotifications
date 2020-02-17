@@ -422,6 +422,53 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
             $quiet
         );
     }
+
+    /**
+     * Format individual message.
+     *
+     *
+     * @param string $date notification related date.
+     * @param string $photo InsertUser avatar.
+     * @param object $object Discussion or Comment object.
+     * @param bool $getImage Request to include image.
+     * @param integer $extract Size of text extract
+     * @param string $headline Notification headline.
+     * @param string $story Additional optional text (for non discussions/comment objects)
+     *
+     * @return string formatted notification.
+     */
+    private function formatMail($date, $photo, $object, $getImage, $extract, $headline, $story) {
+        if (trim($photo) && substr($photo, 0, 4) == 'http') {
+            $sender->setData('Photo', $photo);
+        }
+        if ($getImage) {
+            $sender->setData('Image', $this->getImage($object->Body));
+        }
+
+        // Get content extract.
+        $extractText = false;
+        if ($extract) {
+            $extractText = $this->getExtract($object->Body, $extract);
+        }
+        // Comment headline.
+        $commentText = false;
+        if ($extractText && isset($object->CommentID)) {
+            $commentText = Gdn::translate('Comment').':';
+        }
+
+        $sender->setData([
+            'Headline' => $headline,
+            'On' => sprintf(Gdn::translate('on %s'), $date),
+            'Prefix' => $object->Prefix,
+            'ExtractText' => $extractText,
+            'CommentText' => $commentText,
+            'Story' => $story
+        ]);
+        ob_start();
+        include(Gdn::controller()->fetchViewLocation('mail', '', 'plugins/DelayedNotifications'));
+        return ob_get_clean();
+    }
+
     /**
      * Format individual message.
      *
@@ -824,6 +871,20 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
             return '';
         }
         return $imageUrl;
+    }
+
+    public function pluginController_deNoTest_create($sender, $args) {
+        // Test data for formatMessage/formatMail
+        $date = 'yesterday'; //  notification related date.
+        $photo = ''; // originator photo.
+        $object = (obj)['CommentID' => 33] //Discussion or Comment object.
+        $getImage = true; // Request to include image.
+        $extract = 50; // Size of text extract
+        $headline = 'This is the Headline'; // notification headline.
+        $story = 'humantex mentioned you in mailchecker plugin - issue on Vanilla 3.3'; //additional optional text (for non discussions/comment objects)
+
+        decho($this->formatMessage($date, $photo, $object, $getImage, $extract, $headline, $story), 'message', true);
+        decho($this->formatMail($date, $photo, $object, $getImage, $extract, $headline, $story), 'mail', true);
     }
 }
 
