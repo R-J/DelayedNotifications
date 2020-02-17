@@ -443,13 +443,17 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
         }
         $image = false;
         if ($getImage) {
-            $image = $this->getImage($object->Body);
+            $image = $this->getFirstImage(Gdn_Format::to($object->Body, $object->Format));
         }
 
         // Get content extract.
         $extractText = false;
         if ($extract) {
-            $extractText = $this->getExtract($object->Body, $extract);
+            $extractText = sliceString(
+                Gdn::formatService()->renderExcerpt($object->Body, $object->Format),
+                $exract
+            );
+            // $extractText = $this->getExtract($body, $extract);
         }
         // Comment headline.
         $commentText = false;
@@ -826,7 +830,7 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
     /**
      * Return first embedded image in dicussion/comment body.
      *
-     * @param object $body standard
+     * @param string $body Html.
      *
      * @return string html to include image in notification (or empty string)
      */
@@ -841,7 +845,7 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
             return '';
         }
         $image = substr($image, 0, $i);
-        
+
         $imageUrl = $image;
         $i = stripos($imageUrl, "src=");
         if ($i === false) {
@@ -869,6 +873,35 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
     }
 
     /**
+     * Return url of first embedded image.
+     *
+     * @param string $body Html.
+     *
+     * @return string|false The url of the first image of false.
+     */
+    public function getFirstImage($body) {
+        // Query body for images.
+        $dom = new DomDocument;
+        $dom->loadHTML($body);
+        $xpath = new DomXPath($dom);
+        $images = $xpath->query("//img");
+        // Return if there are no images in body.
+        if (count($images) == 0) {
+            return false;
+        }
+        // Get image url and size.
+        $imageUrl = $images->item(0)->getAttribute('src');
+        list($width, $height) = getimagesize($imageUrl);
+        $minImageSize = Gdn::config('Plugins.DelayedNotifications.MinImageSize', 20);
+        // Ignore small images.
+        if ($width < $minImageSize || $height < $minImageSize) {
+            return false;
+        }
+
+        return $imageUrl;
+    }
+
+    /**
      * Test method for ensuring successfull refactoring.
      *
      * @param VanillaController $sender Instance of the calling class.
@@ -876,7 +909,7 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
      *
      * @return void.
      */
-    public function vanillaController_dnt_create($sender, $args) {
+    public function vanillaController_dnTestMessage_create($sender, $args) {
         // Test data for formatMessage/formatMail
         $date = 'yesterday'; //  notification related date.
         $photo = ''; // originator photo.
@@ -888,6 +921,23 @@ class DelayedNotificationsPlugin extends Gdn_Plugin {
 
         decho($this->formatMessage($date, $photo, $object, $getImage, $extract, $headline, $story), 'message', true);
         decho($this->formatMail($date, $photo, $object, $getImage, $extract, $headline, $story), 'mail', true);
+    }
+
+    public function vanillaController_dnTestImage_create($ender) {
+        $body = '<header class="Header Header-branding">
+<div class="Container">
+<a href="/" class="Header-logo">
+<img src="https://us.v-cdn.net/5018160/uploads/fb3af9601a44d13eb2b42f9e02fe924b.png" alt="Vanilla Forums">
+</a>
+<div class="Header-spacer"></div>
+<a class="Header-brandLink" href="https://blog.vanillaforums.com">Blog</a>
+<a class="Header-brandLink" href="https://docs.vanillaforums.com">Documentation</a>
+<a class="Header-cta" href="http://pages.vanillaforums.com/demo-request-vanilla-forums?utm_source=vanilladocs&amp;utm_medium=cta&amp;utm_campaign=demo-request">Try Vanilla Cloud</a>
+</div>
+</header>';
+
+        decho($this->getImage($body), 'image', true);
+        decho($this->getFirstImage($body), 'first image', true);
     }
 }
 

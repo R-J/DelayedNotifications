@@ -31,7 +31,7 @@
         <col />
     </colgroup>
     <tr>
-        <?php if($image): ?>
+        <?php if ($image): ?>
         <td width="78px" valign="top" align="right">
             <span style="border-radius: 4px;padding: 0px 5px;vertical-align: top;display: table-cell;">
                 <img width="120px" style="display:block; border-radius:6px; border:solid 1px rgba(0,0,0,.08);vertical-align: top;" src="<?= $image ?>" />
